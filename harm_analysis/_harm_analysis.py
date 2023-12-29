@@ -249,12 +249,27 @@ def _mask_array(x, idx_list):
     return np.ma.masked_array(x, mask=~mask)
 
 
+def _int_noise_curve(x: np.array,
+                     harm_bins: np.ndarray,
+                     noise_bins: np.ndarray):
+
+
+    total_noise_array = _mask_array(x, np.concatenate((harm_bins, noise_bins)))
+    total_int_noise = np.cumsum(total_noise_array)
+
+    # The with statement removes warnings about divide-by-zero in the log10
+    # calculation
+    with np.errstate(divide='ignore'):
+        return 10*np.log10(total_int_noise)
+
+
 def _plot(x: np.array,
           freq_array: np.ndarray,
           dc_bins: np.ndarray,
           fund_bins: np.ndarray,
           harm_bins: np.ndarray,
           noise_bins: np.ndarray,
+          int_noise: np.ndarray,
           ax):
 
     x_db = 10*np.log10(x)
@@ -262,15 +277,12 @@ def _plot(x: np.array,
     fund_array = _mask_array(x_db, fund_bins)
     harm_array = _mask_array(x_db, harm_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
-    total_noise_array = _mask_array(x, np.concatenate((harm_bins, noise_bins)))
-
-    int_noise_curve = 10*np.log10(np.cumsum(total_noise_array))
 
     ax.plot(freq_array, fund_array, label="Fundamental", linewidth=0.7)
     ax.plot(freq_array, harm_array, label="Harmonics", linewidth=0.7)
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", linewidth=0.7,
             color='black')
-    ax.plot(freq_array, int_noise_curve, label="Integrated total noise",
+    ax.plot(freq_array, int_noise, label="Integrated total noise",
             linewidth=0.7, color='green')
     ax.legend()
     ax.grid()
@@ -279,26 +291,6 @@ def _plot(x: np.array,
     ax.set_xlabel("[Hz]")
 
     return ax
-
-
-def _get_integ_noise_curve(x: np.array,
-                           enbw_bins: float,
-                           f_array: np.array,
-                           fund_bins: np.array,
-                           harm_bins: np.array,
-                           dc_bins: np.array):
-
-    noise_fft = np.copy(x)
-    # ingore DC and fundamental. Integrate all the rest
-    dc_end = max(dc_bins) + 1
-    noise_fft[fund_bins] = 0
-    # noise_fft[harm_bins] = 0
-
-    intg_noise = 10*np.log10(np.cumsum(noise_fft[dc_end:])/enbw_bins)
-
-    fn_array = f_array[dc_end:]
-
-    return fn_array, intg_noise
 
 
 def harm_analysis(x: np.array,
@@ -378,8 +370,8 @@ def harm_analysis(x: np.array,
     x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, FS=FS,
                                   coherent_gain=coherent_gain)
 
-    fund_bins, harm_loc, harm_bins, dc_bins, noise_bins = _find_bins(x=x_fft_pow,
-                                                                     n_harm=n_harm)
+    fund_bins, harm_loc, harm_bins, dc_bins, noise_bins = \
+        _find_bins(x=x_fft_pow, n_harm=n_harm)
 
     fund_power = np.sum(x_fft_pow[fund_bins]/enbw_bins)
     harm_power = np.sum(x_fft_pow[harm_bins]/enbw_bins)
@@ -388,13 +380,24 @@ def harm_analysis(x: np.array,
 
     sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * FS/sig_len
 
+    # integrated noise curve
+    int_noise = _int_noise_curve(x=x_fft_pow/enbw_bins, harm_bins=harm_bins,
+                                 noise_bins=noise_bins)
+
     # Calculate THD, Signal Power and N metrics in dB
-    thd_db = 10*np.log10(harm_power/fund_power)
-    thdn_db = 10*np.log10(harm_power/fund_power+noise_power)
+    dc_db = 10*np.log10(dc_power)
     sig_pow_db = 10*np.log10(fund_power)
     noise_pow_db = 10*np.log10(noise_power)
+    harm_pow_db = 10*np.log10(harm_power)
+
+    # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
+    thd_db = 10*np.log10(harm_power/fund_power)
+
+    # According to wikipedia, THD+N in dB is equal to 
+    # 10*log10(sum(harmonics power + Noise power)/fundamental power). 
+    # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
+    thdn_db = 10*np.log10((harm_power+noise_power)/fund_power)
     snr_db = sig_pow_db - noise_pow_db
-    dc_db = 10*np.log10(dc_power)
 
     results = {'fund_db': sig_pow_db,
                'fund_freq': sig_freq,
@@ -402,13 +405,15 @@ def harm_analysis(x: np.array,
                'noise_db': noise_pow_db,
                'thd_db': thd_db,
                'snr_db': snr_db,
-               'thdn_db': thdn_db}
+               'sinad_db': -thdn_db,
+               'thdn_db': thdn_db,
+               'total_noise_and_dist': int_noise[-1]}
 
     if plot is False:
         return results
     else:
         ax = _plot(x=x_fft_pow, freq_array=f_array, dc_bins=dc_bins,
                    fund_bins=fund_bins, harm_bins=harm_bins, noise_bins=noise_bins,
-                   ax=ax)
+                   ax=ax, int_noise=int_noise)
 
         return results, ax

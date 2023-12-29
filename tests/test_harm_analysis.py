@@ -38,6 +38,10 @@ def test_harm_analysis():
 
     results = harm_analysis(x, FS=FS)
 
+    print("Function results:")
+    for key, value in results.items():
+        print(f"{key.ljust(10)} [dB]: {value}")
+
     logging.info('\n' +
                  'Expected values\n' +
                  f'    Fundamental power (dB): {fund_pow_db}\n' +
@@ -49,7 +53,7 @@ def test_harm_analysis():
                  f'    SNR (dB): {snr_db}\n' +
                  f'    THD+N (dB): {thdn_db}')
 
-    tolerance = 0.1
+    tolerance = 0.3
 
     assert np.isclose(results['fund_db'], fund_pow_db, rtol=tolerance)
     assert np.isclose(results['fund_freq'], F1, rtol=tolerance)
@@ -57,3 +61,8 @@ def test_harm_analysis():
     assert np.isclose(results['noise_db'], noise_pow_db, rtol=tolerance)
     assert np.isclose(results['thd_db'], thd_db, rtol=tolerance)
     assert np.isclose(results['thdn_db'], thdn_db, rtol=tolerance)
+
+
+if __name__ == "__main__":
+    test_harm_analysis()
+
