@@ -10,6 +10,7 @@ setup(
         'matplotlib',
         'scipy',
         'numpy',
+        'click',
     ],
     entry_points={
         'console_scripts': [
