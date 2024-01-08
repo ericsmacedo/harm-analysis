@@ -86,9 +86,10 @@ Usage: harm_analysis [OPTIONS] FILENAME
   Runs the harm_analysis function for a file containing time domain data
 
 Options:
-  --fs FLOAT  Sampling frequency.
-  --plot      Plot the power spectrum of the data
-  --sep TEXT  Separator between items.
-  --help      Show this message and exit.
-
+  --fs FLOAT      Sampling frequency.
+  --plot          Plot the power spectrum of the data
+  --sep TEXT      Separator between items.
+  --sfactor TEXT  Scaling factor. The data will be multiplied by this number,
+                  before the function is called. Examples: 1/8, 5, etc
+  --help          Show this message and exit.
 ```
