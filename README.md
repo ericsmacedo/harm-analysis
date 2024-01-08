@@ -71,3 +71,24 @@ total_noise_and_dist [dB]: -42.023784918366445
 ```
 
 ![Harmonic Analysis plot](docs/harm_analysis_out_example.png)
+
+## Command line interface 
+Installing the package also installs a command line interface, that allows the user to run the function for text files with time domain data:
+
+The command is `harm_analysis`:
+```
+harm_analysis --help
+```
+Output:
+```
+Usage: harm_analysis [OPTIONS] FILENAME
+
+  Runs the harm_analysis function for a file containing time domain data
+
+Options:
+  --fs FLOAT  Sampling frequency.
+  --plot      Plot the power spectrum of the data
+  --sep TEXT  Separator between items.
+  --help      Show this message and exit.
+
+```

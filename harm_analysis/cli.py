@@ -10,7 +10,7 @@ from harm_analysis import harm_analysis
 @click.option("--plot", is_flag=True, help="Plot the power spectrum of the data")
 @click.option("--sep", default=" ", help='Separator between items.')
 def cli(filename, fs, plot, sep):
-    '''Runs the harm_analysis function from a file containing time domain data'''
+    '''Runs the harm_analysis function for a file containing time domain data'''
 
     file_data = np.fromfile(filename, sep=sep)
 
