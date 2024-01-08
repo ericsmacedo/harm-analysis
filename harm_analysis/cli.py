@@ -2,6 +2,7 @@ import click
 import numpy as np
 import matplotlib.pyplot as plt
 from harm_analysis import harm_analysis
+import ast
 
 
 @click.command()
@@ -9,10 +10,12 @@ from harm_analysis import harm_analysis
 @click.option("--fs", default=1.0, help="Sampling frequency.")
 @click.option("--plot", is_flag=True, help="Plot the power spectrum of the data")
 @click.option("--sep", default=" ", help='Separator between items.')
-def cli(filename, fs, plot, sep):
+@click.option("--sfactor", default="1", help='Scaling factor. The data will be multiplied by this number, before the function is called. Examples: 1/8, 5, etc')
+def cli(filename, fs, plot, sep, sfactor):
     '''Runs the harm_analysis function for a file containing time domain data'''
 
-    file_data = np.fromfile(filename, sep=sep)
+    # scaling factor
+    file_data = np.fromfile(filename, sep=sep)*eval(sfactor)
 
     if plot is True:
         fig, ax = plt.subplots()
