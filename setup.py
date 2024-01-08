@@ -13,7 +13,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'harm_analysis = harm_analysis._harm_analysis:main',
+            'harm_analysis = harm_analysis.cli:cli',
         ],
     },
 )
