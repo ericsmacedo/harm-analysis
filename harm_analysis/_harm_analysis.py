@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import signal
-import matplotlib.pyplot as plt
 
 
 __all__ = ["harm_analysis"]
@@ -252,7 +251,6 @@ def _int_noise_curve(x: np.array,
                      harm_bins: np.ndarray,
                      noise_bins: np.ndarray):
 
-
     total_noise_array = _mask_array(x, np.concatenate((harm_bins, noise_bins)))
     total_int_noise = np.cumsum(total_noise_array)
 
@@ -288,7 +286,7 @@ def _plot(x: np.array,
     # Marker location
     x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
     y_marker = 10*np.log10(np.sum(x[fund_bins]/enbw_bins))
-    ax.text(x_marker, y_marker, f"{np.round(y_marker,2)} dB")
+    ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
 
     ax.legend()
     ax.grid()
@@ -394,13 +392,12 @@ def harm_analysis(x: np.array,
     dc_db = 10*np.log10(dc_power)
     sig_pow_db = 10*np.log10(fund_power)
     noise_pow_db = 10*np.log10(noise_power)
-    harm_pow_db = 10*np.log10(harm_power)
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
     thd_db = 10*np.log10(harm_power/fund_power)
 
-    # According to wikipedia, THD+N in dB is equal to 
-    # 10*log10(sum(harmonics power + Noise power)/fundamental power). 
+    # According to wikipedia, THD+N in dB is equal to
+    # 10*log10(sum(harmonics power + Noise power)/fundamental power).
     # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
     thdn_db = 10*np.log10((harm_power+noise_power)/fund_power)
     snr_db = sig_pow_db - noise_pow_db
