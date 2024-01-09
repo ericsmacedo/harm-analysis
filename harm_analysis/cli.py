@@ -2,7 +2,7 @@ import click
 import numpy as np
 import matplotlib.pyplot as plt
 from harm_analysis import harm_analysis
-import ast
+from matplotlib.ticker import EngFormatter
 
 
 @click.command()
@@ -18,15 +18,25 @@ def cli(filename, fs, plot, sep, sfactor):
     file_data = np.fromfile(filename, sep=sep)*eval(sfactor)
 
     if plot is True:
-        fig, ax = plt.subplots()
-        results, ax = harm_analysis(file_data, FS=fs, plot=True, ax=ax)
+        fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+        results, ax[1] = harm_analysis(file_data, FS=fs, plot=True, ax=ax[1])
     else:
         results = harm_analysis(file_data, FS=fs, plot=False)
 
     print("Function results:")
     for key, value in results.items():
-        click.echo(f"{key.ljust(10)} [dB]: {value}")
+        click.echo(f"{key.ljust(10)}: {value}")
 
     if plot is True:
-        ax.set_title('Harmonic analysis example')
+        ax[1].grid(True, which='both')
+        ax[1].set_title('Power spectrum')
+        ax[1].set_xscale('log')
+        ax[1].xaxis.set_major_formatter(EngFormatter(unit='Hz'))
+
+        ax[0].set_title('Data')
+        ax[0].plot(file_data)
+        ax[0].grid(True, which='both', linestyle='-')
+        ax[0].set_xlabel("[n]")
+
+        plt.tight_layout()
         plt.show()

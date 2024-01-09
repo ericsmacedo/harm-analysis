@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import signal
-    # values of DC bins
 import matplotlib.pyplot as plt
 
 
@@ -270,6 +269,7 @@ def _plot(x: np.array,
           harm_bins: np.ndarray,
           noise_bins: np.ndarray,
           int_noise: np.ndarray,
+          enbw_bins: float,
           ax):
 
     x_db = 10*np.log10(x)
@@ -284,6 +284,12 @@ def _plot(x: np.array,
             color='black')
     ax.plot(freq_array, int_noise, label="Integrated total noise",
             linewidth=0.7, color='green')
+
+    # Marker location
+    x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
+    y_marker = 10*np.log10(np.sum(x[fund_bins]/enbw_bins))
+    ax.text(x_marker, y_marker, f"{np.round(y_marker,2)} dB")
+
     ax.legend()
     ax.grid()
 
@@ -414,6 +420,6 @@ def harm_analysis(x: np.array,
     else:
         ax = _plot(x=x_fft_pow, freq_array=f_array, dc_bins=dc_bins,
                    fund_bins=fund_bins, harm_bins=harm_bins, noise_bins=noise_bins,
-                   ax=ax, int_noise=int_noise)
+                   ax=ax, int_noise=int_noise, enbw_bins=enbw_bins)
 
         return results, ax
