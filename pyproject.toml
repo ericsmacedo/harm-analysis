@@ -1,3 +1,40 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = [
+    "setuptools",
+    "setuptools-scm>=8.0",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "harm-analysis"
+authors = [
+    {name = 'Eric Macedo', email = 'ericsmacedo@gmail.com'}
+]
+description = 'A Python library for Q format representation and overflow handling.'
+dynamic = ["version"] # This in conjunction with setuptools_scm, will generate the 
+                      # versions dynamically
+#readme = "README.md"
+keywords = ["DSP", "Fixed-point", "Signal-Processing", "SNR"]
+license = {text = "MIT"}
+dependencies = [
+    "matplotlib",
+    "scipy",
+    "numpy",
+    "click",
+]
+
+# [[project.urls]
+# [Documentation = "https://qformatpy.readthedocs.io/en/latest/"
+# ["Source Code" = "https://github.com/ericsmacedo/qformatpy"
+
+[tool.setuptools]
+packages = ["harm_analysis"]
+
+[project.scripts]
+harm_analysis = "harm_analysis.cli:cli"
+
+[tool.setuptools_scm]
+
+[optional-dependencies]
+all = ["pytest"]
