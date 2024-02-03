@@ -42,7 +42,7 @@ def _win_metrics(x):
     coherent_gain = np.sum(x)
 
     # Equivalent noise bandwidth of the window, in number of FFT bins
-    eq_noise_bw = np.sum(x**2)/coherent_gain**2
+    eq_noise_bw = np.sum(x**2) / coherent_gain**2
 
     return coherent_gain, eq_noise_bw
 
@@ -75,11 +75,11 @@ def _fft_pow(x: np.ndarray, win: np.ndarray, n_fft: int, FS: float = 1,
     """
 
     # Positive frequencies of the FFT(x*win)
-    x_fft = np.fft.rfft(x*win, n_fft)
-    f_array = np.fft.rfftfreq(n_fft, 1/FS)
+    x_fft = np.fft.rfft(x * win, n_fft)
+    f_array = np.fft.rfftfreq(n_fft, 1 / FS)
 
     # Obtain absolute value and remove gain added by the window used
-    x_fft_abs = np.abs(x_fft)/coherent_gain
+    x_fft_abs = np.abs(x_fft) / coherent_gain
 
     # Single-sided power spectrum
     x_fft_pow = x_fft_abs**2
@@ -111,8 +111,8 @@ def _find_freq_bins(x_fft: np.array, freq: np.array) -> np.array:
 
     # find local maximum near bin
     dist = 3
-    idx0 = max(freq-dist, 0)
-    idx1 = freq+dist+1
+    idx0 = max(freq - dist, 0)
+    idx1 = freq + dist + 1
 
     max_idx = np.argmax(x_fft[idx0:idx1])
     freq = max_idx + freq - dist
@@ -122,14 +122,14 @@ def _find_freq_bins(x_fft: np.array, freq: np.array) -> np.array:
     MAX_N_SMP = 30
     # find end of peak (right side)
     for i in range(fft_length - freq - 1):
-        if x_fft[freq+i] - x_fft[freq+i+1] <= 0 or (i > MAX_N_SMP):
-            end = freq+i+1
+        if x_fft[freq + i] - x_fft[freq + i + 1] <= 0 or (i > MAX_N_SMP):
+            end = freq + i + 1
             break
 
     # find end of peak (left side)
     for i in range(fft_length - freq - 1):
-        if (x_fft[freq-i] - x_fft[freq-(i+1)] <= 0) or (i > MAX_N_SMP):
-            start = freq-i
+        if (x_fft[freq - i] - x_fft[freq - (i + 1)] <= 0) or (i > MAX_N_SMP):
+            start = freq - i
             break
 
     bin_values = np.arange(start, end).astype(int)
@@ -203,7 +203,7 @@ def _find_bins(x, n_harm):
 
     # calculate the frequency of the harmonics.
     # frequencies > fs/2 are ignored
-    harm_loc = fund_loc*np.arange(2, n_harm+2)
+    harm_loc = fund_loc * np.arange(2, n_harm + 2)
     harm_loc = harm_loc[harm_loc <= max_bin]
 
     # Obain bins related to the harmonics of the fundamental frequency
@@ -257,7 +257,7 @@ def _int_noise_curve(x: np.array,
     # The with statement removes warnings about divide-by-zero in the log10
     # calculation
     with np.errstate(divide='ignore'):
-        return 10*np.log10(total_int_noise)
+        return 10 * np.log10(total_int_noise)
 
 
 def _plot(x: np.array,
@@ -270,22 +270,20 @@ def _plot(x: np.array,
           enbw_bins: float,
           ax):
 
-    x_db = 10*np.log10(x)
+    x_db = 10 * np.log10(x)
 
     fund_array = _mask_array(x_db, fund_bins)
     harm_array = _mask_array(x_db, harm_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
-    ax.plot(freq_array, fund_array, label="Fundamental", linewidth=0.7)
-    ax.plot(freq_array, harm_array, label="Harmonics", linewidth=0.7)
-    ax.plot(freq_array, dc_noise_array, label="DC and Noise", linewidth=0.7,
-            color='black')
-    ax.plot(freq_array, int_noise, label="Integrated total noise",
-            linewidth=0.7, color='green')
+    ax.plot(freq_array, fund_array, label="Fundamental")
+    ax.plot(freq_array, harm_array, label="Harmonics")
+    ax.plot(freq_array, dc_noise_array, label="DC and Noise", color='black')
+    ax.plot(freq_array, int_noise, label="Integrated total noise", color='green')
 
     # Marker location
     x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
-    y_marker = 10*np.log10(np.sum(x[fund_bins]/enbw_bins))
+    y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
     ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
 
     ax.legend()
@@ -351,14 +349,63 @@ def harm_analysis(x: np.array,
     sidelobe width of the Hann window. If this is not feasible, you can use a different
     window by using the "window" input.
 
+    Examples
+    --------
+
+    .. plot::
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from harm_analysis import harm_analysis
+
+        # test signal
+        N = 2048
+        FS = 1000
+        t = np.arange(0, N/FS, 1/FS)
+        F1 = 100.13
+
+        noise = np.random.normal(loc=0, scale=10**(-70/20), size=len(t))
+
+        # Test signal
+        # Tone with harmonics, DC and white gaussian noise
+        x = noise + 0.1234 + 2*np.cos(2*np.pi*F1*t) + 0.01*np.cos(2*np.pi*F1*2*t) +\
+            0.005*np.cos(2*np.pi*F1*3*t)
+
+        # Use the harm_analysis function
+        fig, ax = plt.subplots()
+        results, ax = harm_analysis(x, FS=FS, plot=True, ax=ax)
+
+        print("Function results:")
+        for key, value in results.items():
+            print(f"{key.ljust(10)} [dB]: {value}")
+
+        # Show plot
+        ax.set_title('Harmonic analysis example')
+        plt.show()
+
+    The code above also outputs:
+
+    .. code-block::
+
+        Function results:
+        fund_db    [dB]: 3.0103153618915335
+        fund_freq  [dB]: 100.1300002671261
+        dc_db      [dB]: -18.174340815733466
+        noise_db   [dB]: -69.86388900477726
+        thd_db     [dB]: -45.0412474024929
+        snr_db     [dB]: 72.87420436666879
+        sinad_db   [dB]: 45.034100280257974
+        thdn_db    [dB]: -45.034100280257974
+        total_noise_and_dist [dB]: -42.023784918366445
+
     References
-        ----------
-        .. [1] Harris, Fredric J. "On the use of windows for harmonic analysis
-               with the discrete Fourier transform." *Proceedings of the
-               IEEE* 66.1 (1978): 51-83.
-        .. [2] Cerna, Michael, and Audrey F. Harvey. *The fundamentals of
-               FFT-based signal analysis and measurement*. Application Note
-               041, National Instruments, 2000.
+    ----------
+    * [1] Harris, Fredric J. "On the use of windows for harmonic analysis
+           with the discrete Fourier transform." Proceedings of the
+           IEEE 66.1 (1978): 51-83.
+    * [2] Cerna, Michael, and Audrey F. Harvey. The fundamentals of
+           FFT-based signal analysis and measurement. Application Note
+           041, National Instruments, 2000.
     '''
 
     sig_len = len(x)
@@ -368,7 +415,7 @@ def harm_analysis(x: np.array,
 
     # window metrics
     coherent_gain, enbw = _win_metrics(window)
-    enbw_bins = enbw*sig_len
+    enbw_bins = enbw * sig_len
 
     # Obtain the single-sided power spectrum
     x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, FS=FS,
@@ -377,29 +424,29 @@ def harm_analysis(x: np.array,
     fund_bins, harm_loc, harm_bins, dc_bins, noise_bins = \
         _find_bins(x=x_fft_pow, n_harm=n_harm)
 
-    fund_power = np.sum(x_fft_pow[fund_bins]/enbw_bins)
-    harm_power = np.sum(x_fft_pow[harm_bins]/enbw_bins)
-    dc_power = np.sum(x_fft_pow[dc_bins]/enbw_bins)
-    noise_power = np.sum(x_fft_pow[noise_bins]/enbw_bins)
+    fund_power = np.sum(x_fft_pow[fund_bins] / enbw_bins)
+    harm_power = np.sum(x_fft_pow[harm_bins] / enbw_bins)
+    dc_power = np.sum(x_fft_pow[dc_bins] / enbw_bins)
+    noise_power = np.sum(x_fft_pow[noise_bins] / enbw_bins)
 
-    sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * FS/sig_len
+    sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * FS / sig_len
 
     # integrated noise curve
-    int_noise = _int_noise_curve(x=x_fft_pow/enbw_bins, harm_bins=harm_bins,
+    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, harm_bins=harm_bins,
                                  noise_bins=noise_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
-    dc_db = 10*np.log10(dc_power)
-    sig_pow_db = 10*np.log10(fund_power)
-    noise_pow_db = 10*np.log10(noise_power)
+    dc_db = 10 * np.log10(dc_power)
+    sig_pow_db = 10 * np.log10(fund_power)
+    noise_pow_db = 10 * np.log10(noise_power)
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
-    thd_db = 10*np.log10(harm_power/fund_power)
+    thd_db = 10 * np.log10(harm_power / fund_power)
 
     # According to wikipedia, THD+N in dB is equal to
     # 10*log10(sum(harmonics power + Noise power)/fundamental power).
     # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
-    thdn_db = 10*np.log10((harm_power+noise_power)/fund_power)
+    thdn_db = 10 * np.log10((harm_power + noise_power) / fund_power)
     snr_db = sig_pow_db - noise_pow_db
 
     results = {'fund_db': sig_pow_db,
