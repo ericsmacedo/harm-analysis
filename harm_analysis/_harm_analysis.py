@@ -330,13 +330,17 @@ def harm_analysis(x: np.array,
     -------
     dict
         A dictionary containing the analysis results:
-        - 'fund_db': Fundamental power in decibels (sig_pow_db),
-        - 'fund_freq': Frequency of the fundamental tone (sig_freq),
-        - 'dc_db': DC power in decibels (dc_db),
-        - 'noise_db': Noise power in decibels (noise_pow_db),
-        - 'thd_db': Total harmonic distortion in decibels (thd_db),
-        - 'snr_db': Signal-to-noise ratio in decibels (snr_db),
-        - 'thdn_db': Total harmonic distortion plus noise in decibels (thdn_db).
+
+        * "fund_db": Fundamental power in decibels (sig_pow_db),
+        * "fund_freq": Frequency of the fundamental tone (sig_freq),
+        * "dc_db": DC power in decibels (dc_db),
+        * "noise_db": Noise power in decibels (noise_pow_db),
+        * "thd_db": Total harmonic distortion in decibels (thd_db),
+        * "snr_db": Signal-to-noise ratio in decibels (snr_db),
+        * "sinad_db": Signal to noise and distortion ratio in decibels.
+        * "thdn_db": Total harmonic distortion plus noise in decibels (thdn_db).
+        * "total_noise_and_dist": Total noise and distortion in decibels.
+
     plt.axes
         If plot is set to True, the Axes used for plotting is returned.
 
