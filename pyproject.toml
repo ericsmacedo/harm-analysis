@@ -14,7 +14,7 @@ authors = [
 description = 'A Python library for Q format representation and overflow handling.'
 dynamic = ["version"] # This in conjunction with setuptools_scm, will generate the 
                       # versions dynamically
-readme = "README.md"
+readme = "README.rst"
 keywords = ["DSP", "Fixed-point", "Signal-Processing", "SNR"]
 license = {text = "MIT"}
 dependencies = [
