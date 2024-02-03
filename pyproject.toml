@@ -24,9 +24,9 @@ dependencies = [
     "click",
 ]
 
-# [[project.urls]
-# [Documentation = "https://qformatpy.readthedocs.io/en/latest/"
-# ["Source Code" = "https://github.com/ericsmacedo/qformatpy"
+[project.urls]
+Documentation = "https://harm-analysis.readthedocs.io/en/latest/"
+"Source Code" = "https://github.com/ericsmacedo/harm_analysis"
 
 [tool.setuptools]
 packages = ["harm_analysis"]
