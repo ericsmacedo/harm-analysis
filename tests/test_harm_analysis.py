@@ -65,4 +65,3 @@ def test_harm_analysis():
 
 if __name__ == "__main__":
     test_harm_analysis()
-
