@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import signal
+import sys
 
 
 __all__ = ["harm_analysis"]
@@ -158,7 +159,7 @@ def _find_dc_bins(x_fft: np.array) -> np.array:
     return np.argmax(np.diff(x_fft[:50]) > 0) + 1
 
 
-def _find_bins(x, n_harm):
+def _find_bins(x, n_harm, max_bw_bin):
     """
     Find all bins that belong to the fundamental, harmonics, DC, and noise.
 
@@ -167,6 +168,9 @@ def _find_bins(x, n_harm):
     x : ndarray
         Input signal. The input should be the absolute value of the right-sided power
         spectrum.
+    max_bw_bins : int
+        Max bin to look for the fundamental tone. The function will only try to find
+        the fundamental up to this point.
     n_harm : int
         Number of harmonics to find
 
@@ -194,26 +198,42 @@ def _find_bins(x, n_harm):
     dc_end = _find_dc_bins(x)
     dc_bins = np.arange(dc_end)
 
+    if max_bw_bin <= dc_end:
+        sys.exit("Error: max bandwidth is too low and is inside the detected dc bins.")
+
     # the fundamental frequency is found by searching for the bin with the
     # maximum value, excluding DC
-    fund_loc = np.argmax(x[dc_end:]) + dc_end
+    fund_loc = np.argmax(x[dc_end:max_bw_bin]) + dc_end
 
     # list containing bins of fundamental
     fund_bins = _find_freq_bins(x, fund_loc)
 
-    # calculate the frequency of the harmonics.
-    # frequencies > fs/2 are ignored
-    harm_loc = fund_loc * np.arange(2, n_harm + 2)
-    harm_loc = harm_loc[harm_loc <= max_bin]
+    # THD+N bins (all bins excluding DC and the fundamental)
+    thdn_bins = np.setdiff1d(np.arange(len(x)), np.concatenate((fund_bins, dc_bins)))
 
-    # Obain bins related to the harmonics of the fundamental frequency
-    harm_bins = np.concatenate([_find_freq_bins(x, loc) for loc in harm_loc])
+    if n_harm > 0:
+        # calculate the frequency of the harmonics.
+        # frequencies > fs/2 are ignored
+        harm_loc = fund_loc * np.arange(2, n_harm + 2)
+        harm_loc = harm_loc[harm_loc <= max_bin]
+
+        # Obain bins related to the harmonics of the fundamental frequency
+        if harm_loc.size != 0:
+            harm_bins = np.concatenate([_find_freq_bins(x, loc) for loc in harm_loc])
+        else:
+            harm_bins = None
+            harm_bins = None
+    else:
+        harm_bins = None
+        harm_loc = None
 
     # Remaining bins are considered noise.
-    noise_bins = np.setdiff1d(np.arange(len(x)),
-                              np.concatenate((fund_bins, harm_bins, dc_bins)))
+    if harm_bins is None:
+        noise_bins = thdn_bins
+    else:
+        noise_bins = np.setdiff1d(thdn_bins, harm_bins)
 
-    return fund_bins, harm_loc, harm_bins, dc_bins, noise_bins
+    return fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins
 
 
 def _mask_array(x, idx_list):
@@ -248,10 +268,9 @@ def _mask_array(x, idx_list):
 
 
 def _int_noise_curve(x: np.array,
-                     harm_bins: np.ndarray,
                      noise_bins: np.ndarray):
 
-    total_noise_array = _mask_array(x, np.concatenate((harm_bins, noise_bins)))
+    total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)
 
     # The with statement removes warnings about divide-by-zero in the log10
@@ -273,11 +292,12 @@ def _plot(x: np.array,
     x_db = 10 * np.log10(x)
 
     fund_array = _mask_array(x_db, fund_bins)
-    harm_array = _mask_array(x_db, harm_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
     ax.plot(freq_array, fund_array, label="Fundamental")
-    ax.plot(freq_array, harm_array, label="Harmonics")
+    if harm_bins is not None:
+        harm_array = _mask_array(x_db, harm_bins)
+        ax.plot(freq_array, harm_array, label="Harmonics")
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color='black')
     ax.plot(freq_array, int_noise, label="Integrated total noise", color='green')
 
@@ -297,6 +317,7 @@ def _plot(x: np.array,
 
 def harm_analysis(x: np.array,
                   FS: float = 1,
+                  max_bw: float = None,
                   n_harm: int = 5,
                   window: np.array = None,
                   plot=False,
@@ -318,6 +339,11 @@ def harm_analysis(x: np.array,
     window : array_like, optional
              Window that will be multiplied with the signal. Default is
              Hann squared.
+    max_bw : float, optional
+             Maximum frequency bandwidth, in same units as FS,  within which the
+             function will search for the fundamental tone. Useful to filter another
+             tone (or noise) with amplitude greater than the fundamental and located
+             above a certain frequency (see shaped noise example).
     plot : bool or None, optional
            If True, the power spectrum result is plotted. If specified,
            an `ax` must be provided, and the function returns a dictionary
@@ -356,36 +382,8 @@ def harm_analysis(x: np.array,
     Examples
     --------
 
-    .. plot::
-
-        import numpy as np
-        import matplotlib.pyplot as plt
-        from harm_analysis import harm_analysis
-
-        # test signal
-        N = 2048
-        FS = 1000
-        t = np.arange(0, N/FS, 1/FS)
-        F1 = 100.13
-
-        noise = np.random.normal(loc=0, scale=10**(-70/20), size=len(t))
-
-        # Test signal
-        # Tone with harmonics, DC and white gaussian noise
-        x = noise + 0.1234 + 2*np.cos(2*np.pi*F1*t) + 0.01*np.cos(2*np.pi*F1*2*t) +\
-            0.005*np.cos(2*np.pi*F1*3*t)
-
-        # Use the harm_analysis function
-        fig, ax = plt.subplots()
-        results, ax = harm_analysis(x, FS=FS, plot=True, ax=ax)
-
-        print("Function results:")
-        for key, value in results.items():
-            print(f"{key.ljust(10)} [dB]: {value}")
-
-        # Show plot
-        ax.set_title('Harmonic analysis example')
-        plt.show()
+    .. plot:: ../../examples/run_harm_analysis.py
+        :include-source:
 
     The code above also outputs:
 
@@ -401,6 +399,13 @@ def harm_analysis(x: np.array,
         sinad_db   [dB]: 45.034100280257974
         thdn_db    [dB]: -45.034100280257974
         total_noise_and_dist [dB]: -42.023784918366445
+
+    The example below shows how to use the max_bw for cases where the fundamental is not
+    the highest spectral component in the signal. For the example, we set max_bw to
+    5 kHz.
+
+    .. plot:: ../../examples/run_shaped_noise_example.py
+        :include-source:
 
     References
     ----------
@@ -425,19 +430,22 @@ def harm_analysis(x: np.array,
     x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, FS=FS,
                                   coherent_gain=coherent_gain)
 
-    fund_bins, harm_loc, harm_bins, dc_bins, noise_bins = \
-        _find_bins(x=x_fft_pow, n_harm=n_harm)
+    if max_bw is None:
+        max_bw_bin = len(x_fft_pow)
+    else:
+        max_bw_bin = np.argmin(np.abs(f_array - max_bw))
+
+    fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = \
+        _find_bins(x=x_fft_pow, n_harm=n_harm, max_bw_bin=max_bw_bin)
 
     fund_power = np.sum(x_fft_pow[fund_bins] / enbw_bins)
-    harm_power = np.sum(x_fft_pow[harm_bins] / enbw_bins)
     dc_power = np.sum(x_fft_pow[dc_bins] / enbw_bins)
     noise_power = np.sum(x_fft_pow[noise_bins] / enbw_bins)
 
     sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * FS / sig_len
 
-    # integrated noise curve
-    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, harm_bins=harm_bins,
-                                 noise_bins=noise_bins)
+    # total integrated noise curve
+    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=thdn_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
     dc_db = 10 * np.log10(dc_power)
@@ -445,7 +453,12 @@ def harm_analysis(x: np.array,
     noise_pow_db = 10 * np.log10(noise_power)
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
-    thd_db = 10 * np.log10(harm_power / fund_power)
+    if harm_bins is not None:
+        harm_power = np.sum(x_fft_pow[harm_bins] / enbw_bins)
+        thd_db = 10 * np.log10(harm_power / fund_power)
+    else:
+        harm_power = np.nan
+        thd_db = np.nan
 
     # According to wikipedia, THD+N in dB is equal to
     # 10*log10(sum(harmonics power + Noise power)/fundamental power).
