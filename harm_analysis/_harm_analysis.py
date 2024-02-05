@@ -57,7 +57,6 @@ def _rfft_length(n):
         return (n + 1) // 2
 
 
-
 def _win_metrics(x):
     """
     Compute the coherent gain and the equivalent noise bandwidth of a window.
@@ -422,7 +421,7 @@ def harm_analysis(x: np.array,
              Number of harmonics used in the THD calculation.
     window : array_like, optional
              Window that will be multiplied with the signal. Default is
-             Hann squared.
+             Hann window.
     bw : float, optional
          Bandwidth to use for the calculation of the metrics, in same units as FS.
          Also useful to filter another tone (or noise) with amplitude greater than the

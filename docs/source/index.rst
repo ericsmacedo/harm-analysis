@@ -70,9 +70,9 @@ The code above also outputs:
     total_noise_and_dist [dB]: -42.023784918366445
 
 
-The example below shows how to use the max_bw for cases where the fundamental is not
-the highest spectral component in the signal. For the example, we set max_bw to
-5 kHz.
+The example below shows how to use the bw argument, for cases where the fundamental
+is not the highest spectral component in the signal. For the example, we set bw to
+5 kHz. For this case, the metrics will only be calculated from 0 Hz to 5 kHz.
 
 .. plot:: tutorial/examples/run_shaped_noise_example.py
    :include-source:
