@@ -51,7 +51,7 @@ Documentation on how to use the function can be found here:
 Example usage
 -------------
 
-.. plot:: ../../examples/run_harm_analysis.py
+.. plot:: tutorial/examples/run_harm_analysis.py
    :include-source:
 
 The code above also outputs:
@@ -74,7 +74,7 @@ The example below shows how to use the max_bw for cases where the fundamental is
 the highest spectral component in the signal. For the example, we set max_bw to
 5 kHz.
 
-.. plot:: ../../examples/run_shaped_noise_example.py
+.. plot:: tutorial/examples/run_shaped_noise_example.py
    :include-source:
 
 Command line interface

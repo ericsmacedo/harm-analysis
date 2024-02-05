@@ -23,6 +23,41 @@ def _arg_x_as_expected(value):
     return value
 
 
+def _rfft_length(n):
+    """
+    Compute the length of the real FFT (Fast Fourier Transform) result for a given
+    signal length.
+
+    Parameters
+    ----------
+    n : int
+        The length of the input signal.
+
+    Returns
+    -------
+    int
+        The length of the real FFT result for the input signal.
+
+    Notes
+    -----
+    The length of the real FFT result is determined based on the input signal length:
+    - If `n` is even, the length is calculated as (n/2) + 1.
+    - If `n` is odd, the length is calculated as (n+1)/2.
+
+    Examples
+    --------
+    >>> signal_length = 7
+    >>> result_length = rfft_length(signal_length)
+    >>> print(f"The length of np.fft.rfft(x) for a signal of length {signal_length} is: {result_length}")
+    The length of np.fft.rfft(x) for a signal of length 7 is: 4
+    """
+    if n % 2 == 0:
+        return (n // 2) + 1
+    else:
+        return (n + 1) // 2
+
+
+
 def _win_metrics(x):
     """
     Compute the coherent gain and the equivalent noise bandwidth of a window.
@@ -159,7 +194,7 @@ def _find_dc_bins(x_fft: np.array) -> np.array:
     return np.argmax(np.diff(x_fft[:50]) > 0) + 1
 
 
-def _find_bins(x, n_harm, max_bw_bin):
+def _find_bins(x, n_harm, bw_bins):
     """
     Find all bins that belong to the fundamental, harmonics, DC, and noise.
 
@@ -168,7 +203,7 @@ def _find_bins(x, n_harm, max_bw_bin):
     x : ndarray
         Input signal. The input should be the absolute value of the right-sided power
         spectrum.
-    max_bw_bins : int
+    bw_bins : int
         Max bin to look for the fundamental tone. The function will only try to find
         the fundamental up to this point.
     n_harm : int
@@ -192,18 +227,16 @@ def _find_bins(x, n_harm, max_bw_bin):
     This function only works for the right-sided power spectrum (positive frequencies
     only).
     """
-    max_bin = len(x)
-
     # Index of last dc bin
     dc_end = _find_dc_bins(x)
     dc_bins = np.arange(dc_end)
 
-    if max_bw_bin <= dc_end:
+    if bw_bins <= dc_end:
         sys.exit("Error: max bandwidth is too low and is inside the detected dc bins.")
 
     # the fundamental frequency is found by searching for the bin with the
     # maximum value, excluding DC
-    fund_loc = np.argmax(x[dc_end:max_bw_bin]) + dc_end
+    fund_loc = np.argmax(x[dc_end:bw_bins]) + dc_end
 
     # list containing bins of fundamental
     fund_bins = _find_freq_bins(x, fund_loc)
@@ -211,21 +244,7 @@ def _find_bins(x, n_harm, max_bw_bin):
     # THD+N bins (all bins excluding DC and the fundamental)
     thdn_bins = np.setdiff1d(np.arange(len(x)), np.concatenate((fund_bins, dc_bins)))
 
-    if n_harm > 0:
-        # calculate the frequency of the harmonics.
-        # frequencies > fs/2 are ignored
-        harm_loc = fund_loc * np.arange(2, n_harm + 2)
-        harm_loc = harm_loc[harm_loc <= max_bin]
-
-        # Obain bins related to the harmonics of the fundamental frequency
-        if harm_loc.size != 0:
-            harm_bins = np.concatenate([_find_freq_bins(x, loc) for loc in harm_loc])
-        else:
-            harm_bins = None
-            harm_bins = None
-    else:
-        harm_bins = None
-        harm_loc = None
+    harm_loc, harm_bins = _find_harm(x, fund_loc, n_harm, bw_bins)
 
     # Remaining bins are considered noise.
     if harm_bins is None:
@@ -234,6 +253,66 @@ def _find_bins(x, n_harm, max_bw_bin):
         noise_bins = np.setdiff1d(thdn_bins, harm_bins)
 
     return fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins
+
+
+def _find_harm(x, fund_loc, n_harm, bw_bins):
+
+    if n_harm <= 0:
+        harm_bins = None
+        harm_loc = None
+    else:
+        # calculate the frequency of the harmonics.
+        # frequencies > fs/2 are ignored
+        harm_loc = fund_loc * np.arange(2, n_harm + 2)
+        harm_loc = harm_loc[harm_loc <= bw_bins]
+
+        if harm_loc.size != 0:
+            harm_bins = np.concatenate([_find_freq_bins(x, loc) for loc in harm_loc])
+        else:
+            harm_bins = None
+            harm_loc = None
+
+    return harm_loc, harm_bins
+
+
+def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
+    '''
+
+    Calculate the power given the power spectrum and an array of bins.
+
+    Parameters
+    ----------
+    x_fft_pow : numpy.ndarray
+        Power spectrum of the signal.
+    bins : numpy.ndarray
+        Frequency bins to consider for power calculation.
+    enbw_bins : float
+        Equivalent noise bandwidth of the system in number of bins.
+    bw_bins : float
+        Bandwidth in bins.
+
+    Returns
+    -------
+    float or None
+        The normalized power within the specified frequency bins, or None if no valid
+        bins are found.
+
+    Notes
+    -----
+    This function filters frequency bins outside the specified bandwidth (`bw_bins`)
+    and calculates the power by summing the power values within the valid bins and
+    dividing by the equivalent noise bandwidth (`enbw_bins`).
+
+    If no valid bins are found within the specified bandwidth, the function returns
+    None.'''
+
+    # Filter bins that are outside the specified bandwidth
+    bins = bins[bins <= bw_bins]
+
+    if bins.size == 0:
+        return None
+    else:
+        return np.sum(x_fft_pow[bins]) / enbw_bins
 
 
 def _mask_array(x, idx_list):
@@ -287,6 +366,7 @@ def _plot(x: np.array,
           noise_bins: np.ndarray,
           int_noise: np.ndarray,
           enbw_bins: float,
+          bw_bins: int,
           ax):
 
     x_db = 10 * np.log10(x)
@@ -306,6 +386,10 @@ def _plot(x: np.array,
     y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
     ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
 
+    if bw_bins != len(freq_array) - 1:
+        ax.axvline(freq_array[bw_bins], color='black', alpha=0.3, label='bw',
+                   linestyle='--')
+
     ax.legend()
     ax.grid()
 
@@ -317,7 +401,7 @@ def _plot(x: np.array,
 
 def harm_analysis(x: np.array,
                   FS: float = 1,
-                  max_bw: float = None,
+                  bw: float = None,
                   n_harm: int = 5,
                   window: np.array = None,
                   plot=False,
@@ -339,11 +423,10 @@ def harm_analysis(x: np.array,
     window : array_like, optional
              Window that will be multiplied with the signal. Default is
              Hann squared.
-    max_bw : float, optional
-             Maximum frequency bandwidth, in same units as FS,  within which the
-             function will search for the fundamental tone. Useful to filter another
-             tone (or noise) with amplitude greater than the fundamental and located
-             above a certain frequency (see shaped noise example).
+    bw : float, optional
+         Bandwidth to use for the calculation of the metrics, in same units as FS.
+         Also useful to filter another tone (or noise) with amplitude greater than the
+         fundamental and located above a certain frequency (see shaped noise example).
     plot : bool or None, optional
            If True, the power spectrum result is plotted. If specified,
            an `ax` must be provided, and the function returns a dictionary
@@ -361,7 +444,8 @@ def harm_analysis(x: np.array,
         * "fund_freq": Frequency of the fundamental tone (sig_freq),
         * "dc_db": DC power in decibels (dc_db),
         * "noise_db": Noise power in decibels (noise_pow_db),
-        * "thd_db": Total harmonic distortion in decibels (thd_db),
+        * "thd_db": Total harmonic distortion in decibels (thd_db). Returns a np.nan if
+          n_harms is set to 0, or if all the harmonics are outside the bandwidth.
         * "snr_db": Signal-to-noise ratio in decibels (snr_db),
         * "sinad_db": Signal to noise and distortion ratio in decibels.
         * "thdn_db": Total harmonic distortion plus noise in decibels (thdn_db).
@@ -382,7 +466,7 @@ def harm_analysis(x: np.array,
     Examples
     --------
 
-    .. plot:: ../../examples/run_harm_analysis.py
+    .. plot:: tutorial/examples/run_harm_analysis.py
         :include-source:
 
     The code above also outputs:
@@ -400,11 +484,11 @@ def harm_analysis(x: np.array,
         thdn_db    [dB]: -45.034100280257974
         total_noise_and_dist [dB]: -42.023784918366445
 
-    The example below shows how to use the max_bw for cases where the fundamental is not
-    the highest spectral component in the signal. For the example, we set max_bw to
-    5 kHz.
+    The example below shows how to use the bw for cases where the fundamental is not
+    the highest spectral component in the signal. For the example, we set bw to
+    5 kHz. The metrics will only be calculated up to the bw frequency.
 
-    .. plot:: ../../examples/run_shaped_noise_example.py
+    .. plot:: tutorial/examples/run_shaped_noise_example.py
         :include-source:
 
     References
@@ -418,6 +502,8 @@ def harm_analysis(x: np.array,
     '''
 
     sig_len = len(x)
+    # length of the array returned by the np.fft.rfft function
+    rfft_len = _rfft_length(sig_len)
 
     if window is None:
         window = signal.windows.hann(sig_len, sym=False)
@@ -430,41 +516,44 @@ def harm_analysis(x: np.array,
     x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, FS=FS,
                                   coherent_gain=coherent_gain)
 
-    if max_bw is None:
-        max_bw_bin = len(x_fft_pow)
+    # Convert bw to number of bins
+    if bw is None:
+        bw_bins = rfft_len - 1
     else:
-        max_bw_bin = np.argmin(np.abs(f_array - max_bw))
+        bw_bins = np.argmin(np.abs(f_array - bw))
 
     fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = \
-        _find_bins(x=x_fft_pow, n_harm=n_harm, max_bw_bin=max_bw_bin)
+        _find_bins(x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins)
 
-    fund_power = np.sum(x_fft_pow[fund_bins] / enbw_bins)
-    dc_power = np.sum(x_fft_pow[dc_bins] / enbw_bins)
-    noise_power = np.sum(x_fft_pow[noise_bins] / enbw_bins)
+    fund_power = _power_from_bins(x_fft_pow, fund_bins, enbw_bins, bw_bins)
+    dc_power = _power_from_bins(x_fft_pow, dc_bins, enbw_bins, bw_bins)
+    noise_power = _power_from_bins(x_fft_pow, noise_bins, enbw_bins, bw_bins)
 
+    # According to wikipedia, THD+N in dB is equal to
+    # 10*log10(sum(harmonics power + Noise power)/fundamental power).
+    # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
+    thdn_power = _power_from_bins(x_fft_pow, thdn_bins, enbw_bins, bw_bins)/fund_power
+
+    # Estimate frequency using a weighted average
     sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * FS / sig_len
 
     # total integrated noise curve
     int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=thdn_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
-    dc_db = 10 * np.log10(dc_power)
-    sig_pow_db = 10 * np.log10(fund_power)
-    noise_pow_db = 10 * np.log10(noise_power)
+    dc_db = 10*np.log10(dc_power)
+    sig_pow_db = 10*np.log10(fund_power)
+    noise_pow_db = 10*np.log10(noise_power)
+    thdn_db = 10*np.log10(thdn_power)
+    snr_db = sig_pow_db - noise_pow_db
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
     if harm_bins is not None:
-        harm_power = np.sum(x_fft_pow[harm_bins] / enbw_bins)
+        harm_power = _power_from_bins(x_fft_pow, harm_bins, enbw_bins, bw_bins)
         thd_db = 10 * np.log10(harm_power / fund_power)
     else:
         harm_power = np.nan
         thd_db = np.nan
-
-    # According to wikipedia, THD+N in dB is equal to
-    # 10*log10(sum(harmonics power + Noise power)/fundamental power).
-    # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
-    thdn_db = 10 * np.log10((harm_power + noise_power) / fund_power)
-    snr_db = sig_pow_db - noise_pow_db
 
     results = {'fund_db': sig_pow_db,
                'fund_freq': sig_freq,
@@ -481,6 +570,6 @@ def harm_analysis(x: np.array,
     else:
         ax = _plot(x=x_fft_pow, freq_array=f_array, dc_bins=dc_bins,
                    fund_bins=fund_bins, harm_bins=harm_bins, noise_bins=noise_bins,
-                   ax=ax, int_noise=int_noise, enbw_bins=enbw_bins)
+                   ax=ax, int_noise=int_noise, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
         return results, ax

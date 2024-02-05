@@ -20,7 +20,7 @@ shaped_noise = signal.lfilter(b=[1, -1], a=[1, 0], x=quant_noise)
 modulator_output = tone + shaped_noise
 
 fig, ax = plt.subplots()
-_, plt.axes = harm_analysis(x=modulator_output, n_harm=0, max_bw=5e3, FS=FS, plot=True,
+_, plt.axes = harm_analysis(x=modulator_output, n_harm=0, bw=5e3, FS=FS, plot=True,
                             ax=ax)
 ax.set_xscale('log')
 ax.xaxis.set_major_formatter(EngFormatter(unit='Hz'))
