@@ -11,7 +11,7 @@ name = "harm-analysis"
 authors = [
     {name = 'Eric Macedo', email = 'ericsmacedo@gmail.com'}
 ]
-description = 'A Python library for Q format representation and overflow handling.'
+description = 'A Python library to estimate parameters from a signal containing a tone.'
 dynamic = ["version"] # This in conjunction with setuptools_scm, will generate the 
                       # versions dynamically
 readme = "README.rst"
