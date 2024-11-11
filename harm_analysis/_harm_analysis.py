@@ -3,7 +3,7 @@ from scipy import signal
 import sys
 
 
-__all__ = ["harm_analysis"]
+__all__ = ["harm_analysis", "dc_measurement"]
 
 
 def _arg_x_as_expected(value):
@@ -373,17 +373,21 @@ def _plot(x: np.array,
     fund_array = _mask_array(x_db, fund_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
-    ax.plot(freq_array, fund_array, label="Fundamental")
+    if fund_bins is not None:
+        ax.plot(freq_array, fund_array, label="Fundamental")
+
     if harm_bins is not None:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics")
+
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color='black')
     ax.plot(freq_array, int_noise, label="Integrated total noise", color='green')
 
     # Marker location
-    x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
-    y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
-    ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
+    if fund_bins is not None:
+        x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
+        y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
+        ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
 
     if bw_bins != len(freq_array) - 1:
         ax.axvline(freq_array[bw_bins], color='black', alpha=0.3, label='bw',
@@ -569,6 +573,105 @@ def harm_analysis(x: np.array,
     else:
         ax = _plot(x=x_fft_pow, freq_array=f_array, dc_bins=dc_bins,
                    fund_bins=fund_bins, harm_bins=harm_bins, noise_bins=noise_bins,
+                   ax=ax, int_noise=int_noise, enbw_bins=enbw_bins, bw_bins=bw_bins)
+
+        return results, ax
+
+
+def dc_measurement(x: np.array,
+                   FS: float = 1,
+                   bw: float = None,
+                   window: np.array = None,
+                   plot=False,
+                   ax=None) -> dict:
+    '''Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
+
+    The total harmonic distortion is determined from the fundamental frequency and the
+    first five harmonics using a power spectrum of the same length as the input signal.
+    A hann window is applied to the signal, before the power spectrum is obtained.
+
+    Parameters
+    ----------
+    x : array_like
+        Input signal, containing a tone.
+    FS : float, optional
+         Sampling frequency.
+    window : array_like, optional
+             Window that will be multiplied with the signal. Default is
+             Hann window.
+    bw : float, optional
+         Bandwidth to use for the calculation of the metrics, in same units as FS.
+         Also useful to filter another tone (or noise) with amplitude greater than the
+         fundamental and located above a certain frequency (see shaped noise example).
+    plot : bool or None, optional
+           If True, the power spectrum result is plotted. If specified,
+           an `ax` must be provided, and the function returns a dictionary
+           with the results and the specified axes (`ax`). If plot is not set,
+           only the results are returned.
+    ax : plt.Axes or None, optional
+         Axes to be used for plotting. Required if plot is set to True.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the analysis results:
+
+        * "dc_db": DC power in decibels (dc_db),
+        * "noise_db": Noise power in decibels (noise_pow_db),
+
+    plt.axes
+        If plot is set to True, the Axes used for plotting is returned.
+
+    '''
+
+    sig_len = len(x)
+    # length of the array returned by the np.fft.rfft function
+    rfft_len = _rfft_length(sig_len)
+
+    if window is None:
+        window = signal.windows.hann(sig_len, sym=False)
+
+    # window metrics
+    coherent_gain, enbw = _win_metrics(window)
+    enbw_bins = enbw * sig_len
+
+    # Obtain the single-sided power spectrum
+    x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, FS=FS,
+                                  coherent_gain=coherent_gain)
+
+    # Convert bw to number of bins
+    if bw is None:
+        bw_bins = rfft_len - 1
+    else:
+        bw_bins = np.argmin(np.abs(f_array - bw))
+
+    dc_end = _find_dc_bins(x_fft_pow)
+    dc_bins = np.arange(dc_end)
+
+    # Obtain noise bins, by removing the DC bins from the bin list
+    noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), dc_bins)
+
+    dc_power = _power_from_bins(x_fft_pow, dc_bins, enbw_bins, bw_bins)
+    noise_power = _power_from_bins(x_fft_pow, noise_bins, enbw_bins, bw_bins)
+
+    # total integrated noise curve
+    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=noise_bins)
+
+    # Calculate THD, Signal Power and N metrics in dB
+    dc_db = 10*np.log10(dc_power)
+    dc = 10**(dc_db/20)
+    noise_pow_db = 10*np.log10(noise_power)
+
+    results = {'dc': dc,
+               'dc_db': dc_db,
+               'noise_db': noise_pow_db,
+               }
+
+    if plot is False:
+        return results
+    else:
+        ax = _plot(x=x_fft_pow, freq_array=f_array, dc_bins=dc_bins,
+                   fund_bins=None, harm_bins=None, noise_bins=noise_bins,
                    ax=ax, int_noise=int_noise, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
         return results, ax

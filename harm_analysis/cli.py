@@ -1,7 +1,7 @@
 import click
 import numpy as np
 import matplotlib.pyplot as plt
-from harm_analysis import harm_analysis
+from harm_analysis import harm_analysis, dc_measurement
 from matplotlib.ticker import EngFormatter
 
 
@@ -9,9 +9,10 @@ from matplotlib.ticker import EngFormatter
 @click.argument("filename", type=click.Path(exists=True, readable=True))
 @click.option("--fs", default=1.0, help="Sampling frequency.")
 @click.option("--plot", is_flag=True, help="Plot the power spectrum of the data")
+@click.option("--dc", is_flag=True, help="Run only DC measurement")
 @click.option("--sep", default=" ", help='Separator between items.')
 @click.option("--sfactor", default="1", help='Scaling factor. The data will be multiplied by this number, before the function is called. Examples: 1/8, 5, etc')
-def cli(filename, fs, plot, sep, sfactor):
+def cli(filename, fs, plot, sep, sfactor, dc):
     '''Runs the harm_analysis function for a file containing time domain data'''
 
     # scaling factor
@@ -19,9 +20,15 @@ def cli(filename, fs, plot, sep, sfactor):
 
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-        results, ax[1] = harm_analysis(file_data, FS=fs, plot=True, ax=ax[1])
+        if dc:
+            results, ax[1] = dc_measurement(file_data, FS=fs, plot=True, ax=ax[1])
+        else:
+            results, ax[1] = harm_analysis(file_data, FS=fs, plot=True, ax=ax[1])
     else:
-        results = harm_analysis(file_data, FS=fs, plot=False)
+        if dc:
+            results = dc_measurement(file_data, FS=fs)
+        else:
+            results = harm_analysis(file_data, FS=fs, plot=False)
 
     print("Function results:")
     for key, value in results.items():

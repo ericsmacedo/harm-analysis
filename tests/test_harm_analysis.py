@@ -3,7 +3,7 @@
 
 import numpy as np
 import logging
-from harm_analysis._harm_analysis import harm_analysis
+from harm_analysis._harm_analysis import harm_analysis, dc_measurement
 
 
 def test_harm_analysis():
@@ -234,8 +234,53 @@ def test_harm_analysis_harm_zero():
     assert np.isclose(results['thdn_db'], thdn_db, rtol=tolerance)
 
 
+def test_dc_measurement():
+    '''Test for harm_analysis function
+    '''
+
+    # test signal
+    N = 2**18
+    FS = 1000
+    t = np.arange(0, N/FS, 1/FS)
+    bw = 250
+
+    noise_pow_db = -70
+    harm_pow = (0.01**2/2)
+    thdn = 10**(noise_pow_db/10) + harm_pow
+    thdn_db = 10*np.log10(thdn)
+
+    noise_std = 10**(noise_pow_db/20)
+
+    dc_level = 0.123456789
+    dc_power_db = 20*np.log10(dc_level)
+    noise = np.random.normal(loc=0, scale=noise_std, size=len(t))
+
+    F1 = 100.13
+
+    x = dc_level + 0.01*np.cos(2*np.pi*F1*2*t) + noise
+
+    results = dc_measurement(x, bw=bw, FS=FS)
+
+    print("Function results:")
+    for key, value in results.items():
+        print(f"{key.ljust(10)} [dB]: {value}")
+
+    logging.info('\n' +
+                 'Expected values\n' +
+                 f'    Total noise (dB): {thdn_db}\n' +
+                 f'    DC power [dB]: {dc_power_db}\n' +
+                 f'    DC level: {dc_level}\n')
+
+    tolerance = 0.3
+
+    assert np.isclose(results['dc'], dc_level, rtol=tolerance)
+    assert np.isclose(results['dc_db'], dc_power_db, rtol=tolerance)
+    assert np.isclose(results['noise_db'], thdn_db-3, rtol=tolerance)
+
+
 if __name__ == "__main__":
     test_harm_analysis()
     test_harm_analysis_dc()
     test_harm_analysis_bw()
     test_harm_analysis_harm_zero()
+    test_dc_measurement()
