@@ -24,6 +24,8 @@
 import sys
 
 import numpy as np
+from matplotlib.axes import Axes
+from numpy.typing import NDArray
 from scipy import signal
 
 
@@ -100,7 +102,7 @@ def _win_metrics(x):
     return coherent_gain, eq_noise_bw
 
 
-def _fft_pow(x: np.ndarray, win: np.ndarray, n_fft: int, fs: float = 1, coherent_gain: float = 1):
+def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: float = 1, coherent_gain: float = 1):
     """Calculate the single-sided power spectrum of the input signal.
 
     Parameters
@@ -138,7 +140,7 @@ def _fft_pow(x: np.ndarray, win: np.ndarray, n_fft: int, fs: float = 1, coherent
     return x_fft_pow, f_array
 
 
-def _find_freq_bins(x_fft: np.array, freq: np.array) -> np.array:
+def _find_freq_bins(x_fft: NDArray[np.float64], freq: NDArray[np.float64]) -> NDArray[np.float64]:
     """Find frequency Bins of fundamental and harmonics.
 
     Finds the frequency bins of frequencies. The end/start of a frequency
@@ -164,7 +166,7 @@ def _find_freq_bins(x_fft: np.array, freq: np.array) -> np.array:
 
     # find local maximum near bin
     dist = 3
-    idx0 = max(freq - dist, 0)
+    idx0 = np.max(freq - dist, 0)
     idx1 = freq + dist + 1
 
     max_idx = np.argmax(x_fft[idx0:idx1])
@@ -188,7 +190,7 @@ def _find_freq_bins(x_fft: np.array, freq: np.array) -> np.array:
     return np.arange(start, end).astype(int)
 
 
-def _find_dc_bins(x_fft: np.array) -> np.array:
+def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
     """Find DC bins of FFT output.
 
     Finds the DC bins. The end of DC is found by checking the amplitude of
@@ -354,7 +356,7 @@ def _mask_array(x, idx_list):
     return np.ma.masked_array(x, mask=~mask)
 
 
-def _int_noise_curve(x: np.array, noise_bins: np.ndarray):
+def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
     total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)
 
@@ -365,13 +367,13 @@ def _int_noise_curve(x: np.array, noise_bins: np.ndarray):
 
 
 def _plot(  # noqa: PLR0913
-    x: np.array,
-    freq_array: np.ndarray,
-    dc_bins: np.ndarray,
-    fund_bins: np.ndarray,
-    harm_bins: np.ndarray,
-    noise_bins: np.ndarray,
-    int_noise: np.ndarray,
+    x: NDArray[np.float64],
+    freq_array: NDArray[np.float64],
+    dc_bins: NDArray[np.float64],
+    fund_bins: None | NDArray[np.float64],
+    harm_bins: None | NDArray[np.float64],
+    noise_bins: NDArray[np.float64],
+    int_noise: NDArray[np.float64],
     enbw_bins: float,
     bw_bins: int,
     ax,
@@ -410,14 +412,14 @@ def _plot(  # noqa: PLR0913
 
 
 def harm_analysis(  # noqa: PLR0913
-    x: np.array,
+    x: NDArray[np.float64],
     fs: float = 1,
     bw: float | None = None,
     n_harm: int = 5,
     window=None,
     plot=False,
     ax=None,
-) -> dict:
+):
     """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
 
     The total harmonic distortion is determined from the fundamental frequency and the
@@ -597,8 +599,13 @@ def harm_analysis(  # noqa: PLR0913
 
 
 def dc_measurement(  # noqa: PLR0913
-    x: np.array, fs: float = 1, bw: float | None = None, window: np.array = None, plot=False, ax=None
-) -> dict:
+    x: NDArray[np.float64],
+    fs: float = 1,
+    bw: float | None = None,
+    window: None | NDArray[np.float64] = None,
+    plot=False,
+    ax: None | Axes = None,
+):
     """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
 
     The total harmonic distortion is determined from the fundamental frequency and the
