@@ -414,7 +414,7 @@ def harm_analysis(  # noqa: PLR0913
     fs: float = 1,
     bw: float | None = None,
     n_harm: int = 5,
-    window: np.array | None = None,
+    window=None,
     plot=False,
     ax=None,
 ) -> dict:
@@ -597,7 +597,7 @@ def harm_analysis(  # noqa: PLR0913
 
 
 def dc_measurement(  # noqa: PLR0913
-    x: np.array, fs: float = 1, bw: float | None = None, window: np.array | None = None, plot=False, ax=None
+    x: np.array, fs: float = 1, bw: float | None = None, window: np.array = None, plot=False, ax=None
 ) -> dict:
     """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
 
