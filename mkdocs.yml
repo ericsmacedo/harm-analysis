@@ -1,83 +1,83 @@
-#site_name: "HARM-ANALYSIS"
-#site_description: "Easy-To-Use SystemVerilog Parser"
-#site_url: https://harm-analysis.readthedocs.io/en
-#repo_url: https://github.com/ericsmacedo/harm-analysis
-#copyright: Copyright (c) 2024 ericsmacedo
-#
-#theme:
-#  name: material
-#  palette:
-#    - media: "(prefes-color-scheme: light)"
-#      scheme: default
-#      toggle:
-#        icon: material/brightness-7
-#        name: Switch to dark mode
-#    - media: "(prefes-color-scheme: dark)"
-#      scheme: slate
-#      toggle:
-#        icon: material/brightness-4
-#        name: Switch to light mode
-#  features:
-#    - navigation.footer
-#    - navigation.tabs
-#    - navigation.tabs.sticky
-#    - content.code.copy
-#    - content.code.select
-#    - content.code.annotate
-#
-#nav:
-#  - Home:
-#      - Welcome to HARM-ANALYSIS: index.md
-#      - Contributing: contributing.md
-#  - Usage: usage.md
-#  - API:
-#      - Overview: api.md
-#      - Parser: api-parser.md
-#      - Data Model: api-datamodel.md
-#  - Command Line Interface: cli.md
-#
-#plugins:
-#  - search
-#  - include-markdown
-#  - autorefs
-#  - literate-nav:
-#      nav_file: README.md
-#      implicit_index: true
-#  - mkdocstrings:
-#      default_handler: python
-#      handlers:
-#        python:
-#          options:
-#            docstring_options:
-#              ignore_init_summary: true
-#            summary: true
-#            show_source: false
-#            unwrap_annotated: true
-#            members_order: source
-#            show_docstring_parameters: true
-#            show_docstring_other_parameters: true
-#            separate_signature: true
-#            signature_crossrefs: true
-#            show_signature_annotations: false
-#            show_symbol_type_heading: true
-#            # preload_modules: [pydantic]
-#            inherited_members: false
-#          import:
-#            - https://docs.python.org/3/objects.inv
-#
-#markdown_extensions:
-#  - admonition
-#  - attr_list
-#  - mkdocs-click
-#  - pymdownx.details
-#  - pymdownx.highlight:
-#      anchor_linenums: true
-#      line_spans: __span
-#      pygments_lang_class: true
-#  - pymdownx.inlinehilite
-#  - pymdownx.snippets
-#  - pymdownx.superfences
-#
-#watch:
-#  - src
-#  - CONTRIBUTING.md
+site_name: "HARM-ANALYSIS"
+site_description: "Easy-To-Use SystemVerilog Parser"
+site_url: https://harm-analysis.readthedocs.io/en
+repo_url: https://github.com/ericsmacedo/harm-analysis
+copyright: Copyright (c) 2024 ericsmacedo
+
+theme:
+  name: material
+  palette:
+    - media: "(prefes-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefes-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.footer
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+
+nav:
+  - Home:
+      - Welcome to HARM-ANALYSIS: index.md
+      - Contributing: contributing.md
+  #- Usage: usage.md
+  #- API:
+  #    - Overview: api.md
+  #    - Parser: api-parser.md
+  #    - Data Model: api-datamodel.md
+  #- Command Line Interface: cli.md
+
+plugins:
+  - search
+  - include-markdown
+  - autorefs
+  - literate-nav:
+      nav_file: README.md
+      implicit_index: true
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_options:
+              ignore_init_summary: true
+            summary: true
+            show_source: false
+            unwrap_annotated: true
+            members_order: source
+            show_docstring_parameters: true
+            show_docstring_other_parameters: true
+            separate_signature: true
+            signature_crossrefs: true
+            show_signature_annotations: false
+            show_symbol_type_heading: true
+            # preload_modules: [pydantic]
+            inherited_members: false
+          import:
+            - https://docs.python.org/3/objects.inv
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - mkdocs-click
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+watch:
+  - src
+  - CONTRIBUTING.md
