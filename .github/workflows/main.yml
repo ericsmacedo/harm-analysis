@@ -24,7 +24,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - name: Run all
-        run: make all
+        run: uv run inv all
       - name: Upload coverage data to coveralls.io
         run: uv run --frozen -- coveralls --service=github
         env:
