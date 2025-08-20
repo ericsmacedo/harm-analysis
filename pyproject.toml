@@ -33,6 +33,7 @@ keywords = ["DSP", "Signal-Processing", "THD", "SNR"]
 dev = [
     "contextlib-chdir>=1.0.2",
     "coveralls>=3.3.1",
+    "invoke>=2.2.0",
     "mkdocs-click>=0.8.1",
     "mkdocs-include-markdown-plugin>=6.0.5",
     "mkdocs-literate-nav>=0.6.1",
