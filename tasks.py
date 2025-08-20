@@ -23,72 +23,101 @@
 """invoke tasks.py file."""
 
 import os
+import platform
 from pathlib import Path
 
+from colorama import init
 from invoke import task
 
 ENV = "uv run --frozen --"
 PYTEST_OPTIONS = ""
 
 
+# Initialize colorama so ANSI codes work on Windows too
+init(autoreset=True)
+
+ENV = "uv run --frozen --"
+PYTEST_OPTIONS = ""
+is_windows = platform.system() == "Windows"
+
+
+def run_cmd(c, cmd, force_color=False):
+    """Run a command with cross-platform color handling.
+
+    On Linux/macOS, uses pty=True for proper color passthrough.
+    On Windows, avoids pty and optionally forces --color flags.
+    """
+    if force_color:
+        # Try to enforce colors if the tool supports it
+        if "pytest" in cmd and "--color" not in cmd:
+            cmd += " --color=yes"
+        elif "ruff" in cmd and "--color" not in cmd:
+            cmd += " --color always"
+
+    if is_windows:
+        c.run(cmd)
+    else:
+        c.run(cmd, pty=True)
+
+
 @task
 def pre_commit(c):
     """[All] Run 'pre-commit' on all files."""
-    c.run(f"{ENV} pre-commit install --install-hooks", pty=True)
-    c.run(f"{ENV} pre-commit run --all-files", pty=True)
+    run_cmd(c, f"{ENV} pre-commit install --install-hooks", force_color=True)
+    run_cmd(c, f"{ENV} pre-commit run --all-files", force_color=True)
 
 
 @task
 def test(c):
     """[All] Run Unittests via pytest."""
-    c.run(f"{ENV} pytest -vv {PYTEST_OPTIONS}", pty=True)
+    run_cmd(c, f"{ENV} pytest -vv {PYTEST_OPTIONS}", force_color=True)
     print(f"See coverage report:\n\n    file://{Path.cwd()}/htmlcov/index.html\n")
 
 
 @task
 def test2ref(c):
     """Run tests and update refdata."""
-    c.run("touch .test2ref")
-    c.run("rm -rf tests/refdata")
-    c.run(f"{ENV} pytest -vv {PYTEST_OPTIONS}", pty=True)
+    run_cmd(c, "touch .test2ref", force_color=True)
+    run_cmd(c, "rm -rf tests/refdata", force_color=True)
+    run_cmd(c, f"{ENV} pytest -vv {PYTEST_OPTIONS}", force_color=True)
     print(f"See coverage report:\n\n    file://{Path.cwd()}/htmlcov/index.html\n")
-    c.run("rm .test2ref")
+    run_cmd(c, "rm .test2ref", force_color=True)
 
 
 @task
 def checktypes(c):
     """[All] Run Type-Checking via mypy."""
-    c.run(f"{ENV} mypy .", pty=True)
+    run_cmd(c, f"{ENV} mypy .", force_color=True)
 
 
 @task
 def doc(c):
     """[All] Build Documentation via mkdocs."""
-    c.run(f"{ENV} mkdocs build --strict")
+    run_cmd(c, f"{ENV} mkdocs build --strict", force_color=True)
 
 
 @task
 def doc_serve(c):
     """Start Local Documentation Server via mkdocs."""
-    c.run(f"{ENV} mkdocs serve --no-strict", pty=True)
+    run_cmd(c, f"{ENV} mkdocs serve --no-strict", force_color=True)
 
 
 @task
 def clean(c):
     """Remove everything mentioned by .gitignore file."""
-    c.run("git clean -xdf")
+    run_cmd(c, "git clean -xdf", force_color=True)
 
 
 @task
 def distclean(c):
     """Remove everything mentioned by .gitignore file and UNTRACKED files."""
-    c.run("git clean -xdf")
+    run_cmd(c, "git clean -xdf", force_color=True)
 
 
 @task
 def shell(c):
     """Open a project specific shell."""
-    c.run(f"{ENV} {os.environ.get('SHELL', '/bin/bash')}", pty=True)
+    run_cmd(c, f"{ENV} {os.environ.get('SHELL', '/bin/bash')}", force_color=True)
 
 
 @task(pre=[pre_commit, test, checktypes, doc])
