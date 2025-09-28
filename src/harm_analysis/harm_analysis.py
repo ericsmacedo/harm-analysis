@@ -251,10 +251,13 @@ def _find_bins(x, n_harm, bw_bins):
 
     # the fundamental frequency is found by searching for the bin with the
     # maximum value, excluding DC
-    fund_loc = np.argmax(x[dc_end:bw_bins]) + dc_end
+    max_loc = np.argmax(x[dc_end:bw_bins]) + dc_end
 
     # list containing bins of fundamental
-    fund_bins = _find_freq_bins(x, fund_loc)
+    fund_bins = _find_freq_bins(x, max_loc)
+
+    # Estimate precise location using a weighted average
+    fund_loc = np.average(fund_bins, weights=x[fund_bins])
 
     # THD+N bins (all bins excluding DC and the fundamental)
     thdn_bins = np.setdiff1d(np.arange(len(x)), np.concatenate((fund_bins, dc_bins)))
@@ -267,7 +270,7 @@ def _find_bins(x, n_harm, bw_bins):
     else:
         noise_bins = np.setdiff1d(thdn_bins, harm_bins)
 
-    return fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins
+    return fund_loc, fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins
 
 
 def _find_harm(x, fund_loc, n_harm, bw_bins):
@@ -281,7 +284,7 @@ def _find_harm(x, fund_loc, n_harm, bw_bins):
         harm_loc = harm_loc[harm_loc <= bw_bins]
 
         if harm_loc.size != 0:
-            harm_bins = np.concatenate([_find_freq_bins(x, loc) for loc in harm_loc])
+            harm_bins = np.concatenate([_find_freq_bins(x, int(loc)) for loc in harm_loc])
         else:
             harm_bins = None
             harm_loc = None
@@ -366,17 +369,34 @@ def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
         return 10 * np.log10(total_int_noise)
 
 
+def _annotate(ax, x, y, text):
+    ax.annotate(
+        str(text),
+        xy=(x, y),
+        xytext=(0, 15),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.3", "edgecolor": "brown", "facecolor": "white"},
+        arrowprops={"arrowstyle": "-", "color": "brown"},
+    )
+
+
 def _plot(  # noqa: PLR0913
     x: NDArray[np.float64],
     freq_array: NDArray[np.float64],
     dc_bins: NDArray[np.float64],
-    fund_bins: None | NDArray[np.float64],
-    harm_bins: None | NDArray[np.float64],
     noise_bins: NDArray[np.float64],
     int_noise: NDArray[np.float64],
     enbw_bins: float,
     bw_bins: int,
     ax,
+    fund_freq: None | float = None,
+    harm_freq: None | NDArray[np.float64] = None,
+    fund_bins: None | NDArray[np.float64] = None,
+    harm_bins: None | NDArray[np.float64] = None,
 ):
     x_db = 10 * np.log10(x)
 
@@ -386,18 +406,32 @@ def _plot(  # noqa: PLR0913
     if fund_bins is not None:
         ax.plot(freq_array, fund_array, label="Fundamental")
 
+    if fund_freq is not None:
+        x_marker = fund_freq
+        y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
+        _annotate(ax, x_marker, y_marker, "F")
+
     if harm_bins is not None:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics")
 
+        if harm_freq is not None:
+            breaks = np.where(np.diff(harm_bins) > 1)[0] + 1
+            bin_groups = np.split(harm_bins, breaks)
+
+            for i, bins in enumerate(bin_groups):
+                x_marker = harm_freq[i]
+                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
+                _annotate(ax, x_marker, y_marker, f"{i + 1}")
+
+    # if harm_freq is not None:
+    #    for i in range(len(harm_freq)):
+    #        x_marker = harm_freq[i]
+    #        y_marker =
+    #        _annotate(ax, x_marker, y_marker, "{i+1}")
+
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
     ax.plot(freq_array, int_noise, label="Integrated total noise", color="green")
-
-    # Marker location
-    if fund_bins is not None:
-        x_marker = np.average(freq_array[fund_bins], weights=x[fund_bins])
-        y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
-        ax.text(x_marker, y_marker, f"{np.round(y_marker, 2)} dB")
 
     if bw_bins != len(freq_array) - 1:
         ax.axvline(freq_array[bw_bins], color="black", alpha=0.3, label="bw", linestyle="--")
@@ -547,7 +581,7 @@ def harm_analysis(  # noqa: PLR0913
 
     sig_len = len(x)
 
-    fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = _find_bins(
+    fund_loc, fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = _find_bins(
         x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins
     )
 
@@ -560,13 +594,11 @@ def harm_analysis(  # noqa: PLR0913
     # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
     thdn_power = _power_from_bins(x_fft_pow, thdn_bins, enbw_bins, bw_bins) / fund_power
 
-    # Estimate frequency using a weighted average
-    sig_freq = np.average(fund_bins, weights=x_fft_pow[fund_bins]) * fs / sig_len
-
     # total integrated noise curve
     int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=thdn_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
+    sig_freq = fund_loc * fs / sig_len
     dc_db = 10 * np.log10(dc_power)
     sig_pow_db = 10 * np.log10(fund_power)
     noise_pow_db = 10 * np.log10(noise_power)
@@ -577,9 +609,11 @@ def harm_analysis(  # noqa: PLR0913
     if harm_bins is not None:
         harm_power = _power_from_bins(x_fft_pow, harm_bins, enbw_bins, bw_bins)
         thd_db = 10 * np.log10(harm_power / fund_power)
+        harm_freq = harm_loc * fs / sig_len
     else:
         harm_power = np.nan
         thd_db = np.nan
+        harm_freq = None
 
     results = {
         "fund_db": sig_pow_db,
@@ -597,6 +631,8 @@ def harm_analysis(  # noqa: PLR0913
         return results
     ax = _plot(
         x=x_fft_pow,
+        fund_freq=sig_freq,
+        harm_freq=harm_freq,
         freq_array=f_array,
         dc_bins=dc_bins,
         fund_bins=fund_bins,
