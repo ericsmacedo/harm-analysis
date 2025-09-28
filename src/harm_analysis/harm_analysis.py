@@ -411,6 +411,35 @@ def _plot(  # noqa: PLR0913
     return ax
 
 
+def _harm_analysis(
+    x: NDArray[np.float64],
+    fs: float = 1,
+    bw: float | None = None,
+    window=None,
+):
+    sig_len = len(x)
+    # length of the array returned by the np.fft.rfft function
+    rfft_len = _rfft_length(sig_len)
+
+    if window is None:
+        window = signal.windows.hann(sig_len, sym=False)
+
+    # window metrics
+    coherent_gain, enbw = _win_metrics(window)
+    enbw_bins = enbw * sig_len
+
+    # Obtain the single-sided power spectrum
+    x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, fs=fs, coherent_gain=coherent_gain)
+
+    # Convert bw to number of bins
+    if bw is None:
+        bw_bins = rfft_len - 1
+    else:
+        bw_bins = np.argmin(np.abs(f_array - bw))
+
+    return x_fft_pow, f_array, enbw_bins, bw_bins
+
+
 def harm_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],
     fs: float = 1,
@@ -489,7 +518,7 @@ def harm_analysis(  # noqa: PLR0913
 
         Function results:
         fund_db    [dB]: 3.0103153618915335
-        fund_freq  [dB]: 100.1300002671261
+        fund_freq  [Hz]: 100.1300002671261
         dc_db      [dB]: -18.174340815733466
         noise_db   [dB]: -69.86388900477726
         thd_db     [dB]: -45.0412474024929
@@ -514,25 +543,9 @@ def harm_analysis(  # noqa: PLR0913
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
     """
+    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
+
     sig_len = len(x)
-    # length of the array returned by the np.fft.rfft function
-    rfft_len = _rfft_length(sig_len)
-
-    if window is None:
-        window = signal.windows.hann(sig_len, sym=False)
-
-    # window metrics
-    coherent_gain, enbw = _win_metrics(window)
-    enbw_bins = enbw * sig_len
-
-    # Obtain the single-sided power spectrum
-    x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, fs=fs, coherent_gain=coherent_gain)
-
-    # Convert bw to number of bins
-    if bw is None:
-        bw_bins = rfft_len - 1
-    else:
-        bw_bins = np.argmin(np.abs(f_array - bw))
 
     fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = _find_bins(
         x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins
@@ -645,25 +658,7 @@ def dc_measurement(  # noqa: PLR0913
         If plot is set to True, the Axes used for plotting is returned.
 
     """
-    sig_len = len(x)
-    # length of the array returned by the np.fft.rfft function
-    rfft_len = _rfft_length(sig_len)
-
-    if window is None:
-        window = signal.windows.hann(sig_len, sym=False)
-
-    # window metrics
-    coherent_gain, enbw = _win_metrics(window)
-    enbw_bins = enbw * sig_len
-
-    # Obtain the single-sided power spectrum
-    x_fft_pow, f_array = _fft_pow(x=x, win=window, n_fft=sig_len, fs=fs, coherent_gain=coherent_gain)
-
-    # Convert bw to number of bins
-    if bw is None:
-        bw_bins = rfft_len - 1
-    else:
-        bw_bins = np.argmin(np.abs(f_array - bw))
+    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
 
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
