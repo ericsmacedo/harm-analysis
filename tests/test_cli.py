@@ -22,13 +22,14 @@
 
 """Tests the CLI for the harmonic analysis function."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 from click.testing import CliRunner
 
 from harm_analysis.cli import cli
 
 
-def test_harm_analysis_cli():
+def test_harm_analysis_cli(monkeypatch):
     """Test for harm_analysis function.
 
     Checks if the function can obtain results with less than 0.1 dB of error.
@@ -60,7 +61,15 @@ def test_harm_analysis_cli():
 
     runner = CliRunner()
 
-    result = runner.invoke(cli, ["test_data_cli.txt", "--fs", fs])
+    called = {}
+
+    def fake_show():
+        called["was_called"] = True
+
+    monkeypatch.setattr(plt, "show", fake_show)
+    result = runner.invoke(cli, ["test_data_cli.txt", "--fs", fs, "--plot"])
+
+    assert "was_called" in called
 
     assert result.exit_code == 0
 
