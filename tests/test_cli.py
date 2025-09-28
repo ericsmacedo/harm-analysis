@@ -25,11 +25,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from click.testing import CliRunner
+from pytest import mark
 
-from harm_analysis.cli import cli
+from harm_analysis.cli import harm_analysis_cmd, spec_analysis_cmd
 
 
-def test_harm_analysis_cli(monkeypatch):
+@mark.parametrize("cli_name", ["harm", "spec"])
+def test_cli(monkeypatch, cli_name):
     """Test for harm_analysis function.
 
     Checks if the function can obtain results with less than 0.1 dB of error.
@@ -67,7 +69,11 @@ def test_harm_analysis_cli(monkeypatch):
         called["was_called"] = True
 
     monkeypatch.setattr(plt, "show", fake_show)
-    result = runner.invoke(cli, ["test_data_cli.txt", "--fs", fs, "--plot"])
+
+    if cli_name == "harm":
+        result = runner.invoke(harm_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
+    elif cli_name == "spec":
+        result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
 
     assert "was_called" in called
 

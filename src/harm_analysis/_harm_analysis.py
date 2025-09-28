@@ -589,11 +589,16 @@ def harm_analysis(  # noqa: PLR0913
     plot=False,
     ax=None,
 ):
-    """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
+    """Harmonic Analysis.
+
+    Calculates SNR, THD, Fundamental power, and Noise power of the input signal x.
 
     The total harmonic distortion is determined from the fundamental frequency and the
     first five harmonics using a power spectrum of the same length as the input signal.
     A hann window is applied to the signal, before the power spectrum is obtained.
+
+    For simulations with an injected tone.
+
 
     Parameters
     ----------
@@ -736,32 +741,28 @@ def spec_analysis(  # noqa: PLR0913
     plot=False,
     ax: None | Axes = None,
 ):
-    """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
+    """Spectral Analysis.
 
-    The total harmonic distortion is determined from the fundamental frequency and the
-    first five harmonics using a power spectrum of the same length as the input signal.
-    A hann window is applied to the signal, before the power spectrum is obtained.
+    Auto-detects DC, tones, and noise from the spectrum.
 
     Parameters
     ----------
     x : array_like
         Input signal, containing a tone.
     fs : float, optional
-         Sampling frequency.
+        Sampling frequency.
     window : array_like, optional
-             Window that will be multiplied with the signal. Default is
-             Hann window.
+        Window that will be multiplied with the signal. Default is
+        Hann window.
     bw : float, optional
-         Bandwidth to use for the calculation of the metrics, in same units as fs.
-         Also useful to filter another tone (or noise) with amplitude greater than the
-         fundamental and located above a certain frequency (see shaped noise example).
+        Bandwidth to use for the calculation of the metrics, in same units as fs.
     plot : bool or None, optional
-           If True, the power spectrum result is plotted. If specified,
-           an `ax` must be provided, and the function returns a dictionary
-           with the results and the specified axes (`ax`). If plot is not set,
-           only the results are returned.
+        If True, the power spectrum result is plotted. If specified,
+        an `ax` must be provided, and the function returns a dictionary
+        with the results and the specified axes (`ax`). If plot is not set,
+        only the results are returned.
     ax : plt.Axes or None, optional
-         Axes to be used for plotting. Required if plot is set to True.
+        Axes to be used for plotting. Required if plot is set to True.
 
     Returns
     -------
