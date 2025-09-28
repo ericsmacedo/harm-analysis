@@ -758,8 +758,10 @@ def spec_analysis(  # noqa: PLR0913
 
     if tones_loc is not None:
         tones_freq = tones_loc * fs / sig_len
+        tones_amp_db = 10 * np.log10(tones_amp)
     else:
         tones_freq = None
+        tones_amp_db = None
 
     # Obtain noise bins, by removing the DC bins from the bin list
     if tones_bins is not None:
@@ -782,6 +784,8 @@ def spec_analysis(  # noqa: PLR0913
         "dc": dc,
         "dc_db": dc_db,
         "noise_db": noise_pow_db,
+        "tones_amp_db": tones_amp_db,
+        "tones_freq": tones_freq,
     }
 
     if plot is False:

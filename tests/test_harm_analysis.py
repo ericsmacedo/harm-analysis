@@ -306,7 +306,13 @@ def test_spec_analysis():
 
     f1 = 100.13
 
-    x = dc_level + 0.01 * np.cos(2 * np.pi * f1 * 2 * t) + noise
+    x = (
+        dc_level
+        + 2 * np.cos(2 * np.pi * f1 * t)
+        + 0.01 * np.cos(2 * np.pi * f1 * 2 * t)
+        + 3 * np.cos(2 * np.pi * f1 * 3 * t)
+        + noise
+    )
 
     results = spec_analysis(x, fs=fs)
 
@@ -324,6 +330,12 @@ def test_spec_analysis():
 
     tolerance = 0.3
 
+    amp_arr = np.asarray([2, 0.01, 3])
+
+    amp_arr_db = 10 * np.log10((amp_arr**2) / 2)
+
     assert np.isclose(results["dc"], dc_level, rtol=tolerance)
     assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
     assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
+    assert np.allclose(results["tones_freq"], np.asarray([f1, 2 * f1, 3 * f1]), rtol=tolerance)
+    assert np.allclose(results["tones_amp_db"], amp_arr_db, rtol=tolerance)
