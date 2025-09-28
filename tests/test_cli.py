@@ -72,7 +72,3 @@ def test_harm_analysis_cli(monkeypatch):
     assert "was_called" in called
 
     assert result.exit_code == 0
-
-
-if __name__ == "__main__":
-    test_harm_analysis_cli()
