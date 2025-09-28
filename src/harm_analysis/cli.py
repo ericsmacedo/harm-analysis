@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import EngFormatter
 
-from .harm_analysis import dc_measurement, harm_analysis
+from ._harm_analysis import dc_measurement, harm_analysis
 
 
 @click.command()
