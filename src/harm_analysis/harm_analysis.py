@@ -575,41 +575,42 @@ def harm_analysis(  # noqa: PLR0913
     x : array_like
         Input signal, containing a tone.
     fs : float, optional
-         Sampling frequency.
+        Sampling frequency.
     n_harm : int, optional
-             Number of harmonics used in the THD calculation.
+         Number of harmonics used in the THD calculation.
     window : array_like, optional
-             Window that will be multiplied with the signal. Default is
-             Hann window.
+         Window that will be multiplied with the signal. Default is Hann window.
     bw : float, optional
-         Bandwidth to use for the calculation of the metrics, in same units as fs.
-         Also useful to filter another tone (or noise) with amplitude greater than the
-         fundamental and located above a certain frequency (see shaped noise example).
+        Bandwidth to use for the calculation of the metrics, in same units as fs.
+        Also useful to filter another tone (or noise) with amplitude greater than the
+        fundamental and located above a certain frequency (see shaped noise example).
     plot : bool or None, optional
-           If True, the power spectrum result is plotted. If specified,
-           an `ax` must be provided, and the function returns a dictionary
-           with the results and the specified axes (`ax`). If plot is not set,
-           only the results are returned.
+        If True, the power spectrum result is plotted. If specified,
+        an `ax` must be provided, and the function returns a dictionary
+        with the results and the specified axes (`ax`). If plot is not set,
+        only the results are returned.
     ax : plt.Axes or None, optional
-         Axes to be used for plotting. Required if plot is set to True.
+        Axes to be used for plotting. Required if plot is set to True.
 
-    Returns:
+
+    Returns
     -------
-    dict
-        A dictionary containing the analysis results:
+    properties: dict
 
-        * "fund_db": Fundamental power in decibels (sig_pow_db),
-        * "fund_freq": Frequency of the fundamental tone (sig_freq),
-        * "dc_db": DC power in decibels (dc_db),
-        * "noise_db": Noise power in decibels (noise_pow_db),
-        * "thd_db": Total harmonic distortion in decibels (thd_db). Returns a np.nan if
-          n_harms is set to 0, or if all the harmonics are outside the bandwidth.
-        * "snr_db": Signal-to-noise ratio in decibels (snr_db),
-        * "sinad_db": Signal to noise and distortion ratio in decibels.
-        * "thdn_db": Total harmonic distortion plus noise in decibels (thdn_db).
-        * "total_noise_and_dist": Total noise and distortion in decibels.
+        Dictionary containing the analysis results
 
-    plt.axes
+        - `fund_db`: Fundamental power in decibels.
+        - `fund_freq` Frequency of the fundamental tone.
+        - `dc_db`: DC power in decibels.
+        - `noise_db`: Noise power in decibels.
+        - `thd_db`: Total harmonic distortion in decibels. Returns `numpy.nan` if
+        `n_harm` is 0 or if all harmonics are outside the bandwidth.
+        - `snr_db`: Signal-to-noise ratio in decibels.
+        - `sinad_db`: Signal-to-noise-and-distortion ratio in decibels.
+        - `thdn_db`: Total harmonic distortion plus noise in decibels.
+        - `total_noise_and_dist`: Total noise and distortion in decibels.
+
+    ax : matplotlib axes
         If plot is set to True, the Axes used for plotting is returned.
 
     Notes:
@@ -621,43 +622,15 @@ def harm_analysis(  # noqa: PLR0913
     sidelobe width of the Hann window. If this is not feasible, you can use a different
     window by using the "window" input.
 
-    Examples:
-    --------
-
-    .. plot:: tutorial/examples/run_harm_analysis.py
-        :include-source:
-
-    The code above also outputs:
-
-    .. code-block::
-
-        Function results:
-        fund_db    [dB]: 3.0103153618915335
-        fund_freq  [Hz]: 100.1300002671261
-        dc_db      [dB]: -18.174340815733466
-        noise_db   [dB]: -69.86388900477726
-        thd_db     [dB]: -45.0412474024929
-        snr_db     [dB]: 72.87420436666879
-        sinad_db   [dB]: 45.034100280257974
-        thdn_db    [dB]: -45.034100280257974
-        total_noise_and_dist [dB]: -42.023784918366445
-
-    The example below shows how to use the bw for cases where the fundamental is not
-    the highest spectral component in the signal. For the example, we set bw to
-    5 kHz. The metrics will only be calculated up to the bw frequency.
-
-    .. plot:: tutorial/examples/run_shaped_noise_example.py
-        :include-source:
-
     References:
     ----------
-    * [1] Harris, Fredric J. "On the use of windows for harmonic analysis
+    - [1] Harris, Fredric J. "On the use of windows for harmonic analysis
            with the discrete Fourier transform." Proceedings of the
            IEEE 66.1 (1978): 51-83.
-    * [2] Cerna, Michael, and Audrey F. Harvey. The fundamentals of
+    - [2] Cerna, Michael, and Audrey F. Harvey. The fundamentals of
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
-    """
+    """  # noqa: D416
     x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
 
     sig_len = len(x)
@@ -763,18 +736,18 @@ def dc_measurement(  # noqa: PLR0913
     ax : plt.Axes or None, optional
          Axes to be used for plotting. Required if plot is set to True.
 
-    Returns:
+    Returns
     -------
-    dict
-        A dictionary containing the analysis results:
+    properties : dict
+        A dictionary containing the analysis results
 
-        * "dc_db": DC power in decibels (dc_db),
-        * "noise_db": Noise power in decibels (noise_pow_db),
+        - `dc_db`: DC power in decibels (dc_db),
+        - `noise_db`: Noise power in decibels (noise_pow_db),
 
     plt.axes
         If plot is set to True, the Axes used for plotting is returned.
 
-    """
+    """  # noqa: D416
     x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
     sig_len = len(x)
 

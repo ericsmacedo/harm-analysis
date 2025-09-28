@@ -12,3 +12,29 @@
 [![Issues](https://img.shields.io/github/issues/ericsmacedo/harm-analysis)](https://github.com/ericsmacedo/harm-analysis/issues)
 [![PRs open](https://img.shields.io/github/issues-pr/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls)
 [![PRs done](https://img.shields.io/github/issues-pr-closed/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls?q=is%3Apr+is%3Aclosed)
+
+# Harmonic Analysis package
+
+* [Documentation](https://harm-analysis.readthedocs.io/en/stable/)
+* [PyPI](https://pypi.org/project/harm-analysis/)
+* [Sources](https://github.com/ericsmacedo/harm-analysis)
+* [Issues](https://github.com/ericsmacedo/harm-analysis/issues)
+
+## Introduction
+
+The harmonic analysis package uses FFT to estimate parameters of an input signal.
+The package provides two main functions:
+
+- `harm_analysis`: for simulations with an injected tone, returning SNR, THDN, Noise, etc.
+- `spec_analysis`: for cases without an injected tone, that auto-detects DC, tones, and noise from the spectrum.
+
+See [usage](./docs/usage.md) for examples.
+
+
+## Installation
+
+Installing it is pretty easy:
+
+```bash
+pip install harm-analysis
+```
