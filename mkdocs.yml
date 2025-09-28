@@ -25,16 +25,16 @@ theme:
     - content.code.select
     - content.code.annotate
 
-#nav:
-#  - Home:
-#      - Welcome to HARM-ANALYSIS: index.md
-#      - Contributing: contributing.md
-#  - Usage: usage.md
-#  - API:
-#      - Overview: api.md
-#      - Parser: api-parser.md
-#      - Data Model: api-datamodel.md
-#  - Command Line Interface: cli.md
+nav:
+  - Home:
+      - Welcome to HARM-ANALYSIS: index.md
+      - Contributing: contributing.md
+  - Usage: usage.md
+  - API:
+      - Overview: api.md
+      - Parser: api-parser.md
+      - Data Model: api-datamodel.md
+  - Command Line Interface: cli.md
 
 plugins:
   - search
@@ -62,6 +62,7 @@ plugins:
             show_symbol_type_heading: true
             # preload_modules: [pydantic]
             inherited_members: false
+            docstring_style: numpy
           import:
             - https://docs.python.org/3/objects.inv
 

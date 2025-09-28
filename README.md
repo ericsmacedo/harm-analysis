@@ -12,3 +12,29 @@
 [![Issues](https://img.shields.io/github/issues/ericsmacedo/harm-analysis)](https://github.com/ericsmacedo/harm-analysis/issues)
 [![PRs open](https://img.shields.io/github/issues-pr/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls)
 [![PRs done](https://img.shields.io/github/issues-pr-closed/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls?q=is%3Apr+is%3Aclosed)
+
+# Harmonic Analysis package
+
+* [Documentation](https://harm-analysis.readthedocs.io/en/stable/)
+* [PyPI](https://pypi.org/project/harm-analysis/)
+* [Sources](https://github.com/ericsmacedo/harm-analysis)
+* [Issues](https://github.com/ericsmacedo/harm-analysis/issues)
+
+## Introduction
+
+The harmonic analysis function uses an FFT to estimate the following parameters from a signal containing a tone:
+
+- THD and THD+N
+- Fundamental power and frequency location
+- Noise power
+- SNR, SINAD
+- DC level
+- Total integrated noise (everything except DC and the fundamental)
+
+## Installation
+
+Installing it is pretty easy:
+
+```bash
+pip install harm-analysis
+```
