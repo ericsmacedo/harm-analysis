@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from harm_analysis import dc_measurement
+from harm_analysis import spec_analysis
 
 # test signal
 N = 4096
@@ -26,7 +26,7 @@ x = (
 
 # Use the harm_analysis function
 fig, ax = plt.subplots()
-results, ax = dc_measurement(x, fs=fs, plot=True, ax=ax)
+results, ax = spec_analysis(x, fs=fs, plot=True, ax=ax)
 
 print("Function results:")
 for key, value in results.items():

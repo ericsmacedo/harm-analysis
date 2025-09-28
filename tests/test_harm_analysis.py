@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark
 
-from harm_analysis import dc_measurement, harm_analysis
+from harm_analysis import harm_analysis, spec_analysis
 
 rng = np.random.default_rng()
 
@@ -286,7 +286,7 @@ def test_harm_analysis_harm_zero():
     assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
 
 
-def test_dc_measurement():
+def test_spec_analysis():
     """Test for harm_analysis function."""
     # test signal
     n = 2**18
@@ -306,9 +306,15 @@ def test_dc_measurement():
 
     f1 = 100.13
 
-    x = dc_level + 0.01 * np.cos(2 * np.pi * f1 * 2 * t) + noise
+    x = (
+        dc_level
+        + 2 * np.cos(2 * np.pi * f1 * t)
+        + 0.01 * np.cos(2 * np.pi * f1 * 2 * t)
+        + 3 * np.cos(2 * np.pi * f1 * 3 * t)
+        + noise
+    )
 
-    results = dc_measurement(x, fs=fs)
+    results = spec_analysis(x, fs=fs)
 
     print("Function results:")
     for key, value in results.items():
@@ -324,14 +330,12 @@ def test_dc_measurement():
 
     tolerance = 0.3
 
+    amp_arr = np.asarray([2, 0.01, 3])
+
+    amp_arr_db = 10 * np.log10((amp_arr**2) / 2)
+
     assert np.isclose(results["dc"], dc_level, rtol=tolerance)
     assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
     assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
-
-
-if __name__ == "__main__":
-    test_harm_analysis()
-    test_harm_analysis_dc()
-    test_harm_analysis_bw()
-    test_harm_analysis_harm_zero()
-    test_dc_measurement()
+    assert np.allclose(results["tones_freq"], np.asarray([f1, 2 * f1, 3 * f1]), rtol=tolerance)
+    assert np.allclose(results["tones_amp_db"], amp_arr_db, rtol=tolerance)

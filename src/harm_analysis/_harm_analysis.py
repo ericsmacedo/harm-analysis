@@ -450,7 +450,7 @@ def _annotate(ax, x, y, text):
     )
 
 
-def _plot(  # noqa: PLR0913
+def _plot_spec(  # noqa: PLR0913
     x: NDArray[np.float64],
     freq_array: NDArray[np.float64],
     dc_bins: NDArray[np.float64],
@@ -459,12 +459,55 @@ def _plot(  # noqa: PLR0913
     enbw_bins: float,
     bw_bins: int,
     ax,
+    tones_freq: None | NDArray[np.float64] = None,
+    tones_bins: None | NDArray[np.float64] = None,
+):
+    x_db = 10 * np.log10(x)
+
+    dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
+
+    if tones_bins is not None:
+        tones_array = _mask_array(x_db, tones_bins)
+        ax.plot(freq_array, tones_array, label="Tones")
+
+        if tones_freq is not None:
+            breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
+            bin_groups = np.split(tones_bins, breaks)
+
+            for i, bins in enumerate(bin_groups):
+                x_marker = tones_freq[i]
+                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
+                _annotate(ax, x_marker, y_marker, f"T{i}")
+
+    ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
+    ax.plot(freq_array, int_noise, label="Integrated noise", color="green")
+
+    if bw_bins != len(freq_array) - 1:
+        ax.axvline(freq_array[bw_bins], color="black", alpha=0.3, label="bw", linestyle="--")
+
+    ax.legend()
+    ax.grid()
+
+    ax.set_ylabel("[dB]")
+    ax.set_xlabel("[Hz]")
+
+    return ax
+
+
+def _plot_harm(  # noqa: PLR0913
+    x: NDArray[np.float64],
+    freq_array: NDArray[np.float64],
+    dc_bins: NDArray[np.float64],
+    noise_bins: NDArray[np.float64],
+    int_noise: NDArray[np.float64],
+    int_noise_p_harm: NDArray[np.float64],
+    enbw_bins: float,
+    bw_bins: int,
+    ax,
     fund_freq: None | float = None,
     harm_freq: None | NDArray[np.float64] = None,
     fund_bins: None | NDArray[np.float64] = None,
     harm_bins: None | NDArray[np.float64] = None,
-    tones_freq: None | NDArray[np.float64] = None,
-    tones_bins: None | NDArray[np.float64] = None,
 ):
     x_db = 10 * np.log10(x)
 
@@ -492,27 +535,9 @@ def _plot(  # noqa: PLR0913
                 y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
                 _annotate(ax, x_marker, y_marker, f"{i + 1}")
 
-    if tones_bins is not None:
-        tones_array = _mask_array(x_db, tones_bins)
-        ax.plot(freq_array, tones_array, label="Tones")
-
-        if tones_freq is not None:
-            breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
-            bin_groups = np.split(tones_bins, breaks)
-
-            for i, bins in enumerate(bin_groups):
-                x_marker = tones_freq[i]
-                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
-                _annotate(ax, x_marker, y_marker, f"T{i}")
-
-    # if harm_freq is not None:
-    #    for i in range(len(harm_freq)):
-    #        x_marker = harm_freq[i]
-    #        y_marker =
-    #        _annotate(ax, x_marker, y_marker, "{i+1}")
-
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
-    ax.plot(freq_array, int_noise, label="Integrated total noise", color="green")
+    ax.plot(freq_array, int_noise_p_harm, label="Integrated noise (inc. harmonics)", color="green")
+    ax.plot(freq_array, int_noise, label="Integrated noise", color="purple")
 
     if bw_bins != len(freq_array) - 1:
         ax.axvline(freq_array[bw_bins], color="black", alpha=0.3, label="bw", linestyle="--")
@@ -564,11 +589,16 @@ def harm_analysis(  # noqa: PLR0913
     plot=False,
     ax=None,
 ):
-    """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
+    """Harmonic Analysis.
+
+    Calculates SNR, THD, Fundamental power, and Noise power of the input signal x.
 
     The total harmonic distortion is determined from the fundamental frequency and the
     first five harmonics using a power spectrum of the same length as the input signal.
     A hann window is applied to the signal, before the power spectrum is obtained.
+
+    For simulations with an injected tone.
+
 
     Parameters
     ----------
@@ -649,7 +679,8 @@ def harm_analysis(  # noqa: PLR0913
     thdn_power = _power_from_bins(x_fft_pow, thdn_bins, enbw_bins, bw_bins) / fund_power
 
     # total integrated noise curve
-    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=thdn_bins)
+    int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=noise_bins)
+    int_noise_p_harm = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=thdn_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
     sig_freq = fund_loc * fs / sig_len
@@ -683,7 +714,7 @@ def harm_analysis(  # noqa: PLR0913
 
     if plot is False:
         return results
-    ax = _plot(
+    ax = _plot_harm(
         x=x_fft_pow,
         fund_freq=sig_freq,
         harm_freq=harm_freq,
@@ -694,6 +725,7 @@ def harm_analysis(  # noqa: PLR0913
         noise_bins=noise_bins,
         ax=ax,
         int_noise=int_noise,
+        int_noise_p_harm=int_noise_p_harm,
         enbw_bins=enbw_bins,
         bw_bins=bw_bins,
     )
@@ -701,7 +733,7 @@ def harm_analysis(  # noqa: PLR0913
     return results, ax
 
 
-def dc_measurement(  # noqa: PLR0913
+def spec_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],
     fs: float = 1,
     bw: float | None = None,
@@ -709,32 +741,28 @@ def dc_measurement(  # noqa: PLR0913
     plot=False,
     ax: None | Axes = None,
 ):
-    """Calculate SNR, THD, Fundamental power, and Noise power of the input signal x.
+    """Spectral Analysis.
 
-    The total harmonic distortion is determined from the fundamental frequency and the
-    first five harmonics using a power spectrum of the same length as the input signal.
-    A hann window is applied to the signal, before the power spectrum is obtained.
+    Auto-detects DC, tones, and noise from the spectrum.
 
     Parameters
     ----------
     x : array_like
         Input signal, containing a tone.
     fs : float, optional
-         Sampling frequency.
+        Sampling frequency.
     window : array_like, optional
-             Window that will be multiplied with the signal. Default is
-             Hann window.
+        Window that will be multiplied with the signal. Default is
+        Hann window.
     bw : float, optional
-         Bandwidth to use for the calculation of the metrics, in same units as fs.
-         Also useful to filter another tone (or noise) with amplitude greater than the
-         fundamental and located above a certain frequency (see shaped noise example).
+        Bandwidth to use for the calculation of the metrics, in same units as fs.
     plot : bool or None, optional
-           If True, the power spectrum result is plotted. If specified,
-           an `ax` must be provided, and the function returns a dictionary
-           with the results and the specified axes (`ax`). If plot is not set,
-           only the results are returned.
+        If True, the power spectrum result is plotted. If specified,
+        an `ax` must be provided, and the function returns a dictionary
+        with the results and the specified axes (`ax`). If plot is not set,
+        only the results are returned.
     ax : plt.Axes or None, optional
-         Axes to be used for plotting. Required if plot is set to True.
+        Axes to be used for plotting. Required if plot is set to True.
 
     Returns
     -------
@@ -758,8 +786,10 @@ def dc_measurement(  # noqa: PLR0913
 
     if tones_loc is not None:
         tones_freq = tones_loc * fs / sig_len
+        tones_amp_db = 10 * np.log10(tones_amp)
     else:
         tones_freq = None
+        tones_amp_db = None
 
     # Obtain noise bins, by removing the DC bins from the bin list
     if tones_bins is not None:
@@ -782,16 +812,16 @@ def dc_measurement(  # noqa: PLR0913
         "dc": dc,
         "dc_db": dc_db,
         "noise_db": noise_pow_db,
+        "tones_amp_db": tones_amp_db,
+        "tones_freq": tones_freq,
     }
 
     if plot is False:
         return results
-    ax = _plot(
+    ax = _plot_spec(
         x=x_fft_pow,
         freq_array=f_array,
         dc_bins=dc_bins,
-        fund_bins=None,
-        harm_bins=None,
         noise_bins=noise_bins,
         ax=ax,
         int_noise=int_noise,

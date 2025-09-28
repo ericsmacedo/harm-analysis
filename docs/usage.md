@@ -28,7 +28,7 @@ thdn_db: -45.04633222911549
 total_noise_and_dist: -42.036003683325944
 ```
 
-![test](./images/example_usage.png)
+![example_usage.py output plot](./images/example_usage.png)
 
 ## `spec_analysis` example usage
 
@@ -37,4 +37,13 @@ total_noise_and_dist: -42.036003683325944
 ```
 
 outputs:
-FIXME
+```
+Function results:
+dc         [dB]: 0.12340127616098903
+dc_db      [dB]: -18.173606979992375
+noise_db   [dB]: -69.88787931686679
+tones_amp_db [dB]: [-43.01019642   3.01027093 -43.01618807 -49.04094948]
+tones_freq [dB]: [ 43.10254    100.08616524 200.3323352  300.11378463]
+```
+
+![example_spec_analysis.py output plot](./images/example_spec_analysis.png)

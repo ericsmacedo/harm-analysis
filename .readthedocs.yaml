@@ -13,6 +13,6 @@ build:
   commands:
     - pip install --upgrade --no-cache-dir pip
     - pip install --no-cache-dir uv
-    - make doc
+    - uv run inv doc
     - mkdir _readthedocs
     - cp -r site _readthedocs/html

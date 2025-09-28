@@ -20,6 +20,7 @@ dependencies = [
     "click>=8.2.1",
     "matplotlib>=3.10.3",
     "numpy>=2.2.6",
+    "rich>=14.1.0",
     "scipy>=1.15.3",
 ]
 keywords = ["DSP", "Signal-Processing", "THD", "SNR"]
@@ -47,7 +48,8 @@ dev = [
 ]
 
 [project.scripts]
-harm-analysis = "harm_analysis.cli:cli"
+harm-analysis = "harm_analysis.cli:harm_analysis_cmd"
+spec-analysis = "harm_analysis.cli:spec_analysis_cmd"
 
 [build-system]
 requires = ["pdm-backend"]
