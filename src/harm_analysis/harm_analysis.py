@@ -781,10 +781,12 @@ def dc_measurement(  # noqa: PLR0913
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
 
-    tones_loc, tones_amp, tones_bins = _find_tones(x, enbw_bins=enbw_bins, bw_bins=bw_bins)
+    tones_loc, tones_amp, tones_bins = _find_tones(x_fft_pow, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
     if tones_loc is not None:
         tones_freq = tones_loc * fs / sig_len
+    else:
+        tones_freq = None
 
     # Obtain noise bins, by removing the DC bins from the bin list
     if tones_bins is not None:

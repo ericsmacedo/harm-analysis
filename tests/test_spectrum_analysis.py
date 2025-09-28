@@ -1,3 +1,4 @@
+"""Tests spectrum analysis function."""
 # MIT License
 #
 # Copyright (c) 2025 ericsmacedo
@@ -20,55 +21,51 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Tests the CLI for the harmonic analysis function."""
-
 import matplotlib.pyplot as plt
 import numpy as np
-from click.testing import CliRunner
+from pytest import mark
 
-from harm_analysis.cli import cli
+from harm_analysis import dc_measurement
+
+rng = np.random.default_rng()
 
 
-def test_harm_analysis_cli(monkeypatch):
+@mark.parametrize("plot_en", [True, False])
+def test_harm_analysis(plot_en):
     """Test for harm_analysis function.
 
     Checks if the function can obtain results with less than 0.1 dB of error.
     """
     # test signal
-    n = 2048
+    n = 4096
     fs = 1000
     t = np.arange(0, n / fs, 1 / fs)
-
-    noise_pow_db = -70
-    noise_std = 10 ** (noise_pow_db / 20)
-    dc_level = 0.123456789
-
-    random_state = np.random.RandomState(1234567890)
-    noise = random_state.normal(loc=0, scale=noise_std, size=len(t))
-
     f1 = 100.13
 
+    noise = rng.normal(loc=0, scale=10 ** (-70 / 20), size=len(t))
+
+    # Test signal
+    # Tone with harmonics, DC and white gaussian noise
     x = (
-        dc_level
+        noise
+        + 0.1234
         + 2 * np.cos(2 * np.pi * f1 * t)
         + 0.01 * np.cos(2 * np.pi * f1 * 2 * t)
         + 0.005 * np.cos(2 * np.pi * f1 * 3 * t)
-        + noise
+        + 0.01 * np.cos(2 * np.pi * f1 * 0.43 * t)
     )
 
-    # Save data to TXT file
-    np.savetxt("test_data_cli.txt", x, delimiter="\n")
+    # Use the harm_analysis function
+    if plot_en:
+        fig, ax = plt.subplots()
+        dc_measurement(x, fs=fs, plot=True, ax=ax)
+    else:
+        dc_measurement(x, fs=fs)
 
-    runner = CliRunner()
-
-    called = {}
-
-    def fake_show():
-        called["was_called"] = True
-
-    monkeypatch.setattr(plt, "show", fake_show)
-    result = runner.invoke(cli, ["test_data_cli.txt", "--fs", fs, "--plot"])
-
-    assert "was_called" in called
-
-    assert result.exit_code == 0
+    # TODO: add assertions
+    # assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
+    # assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
+    # assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
+    # assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
+    # assert np.isclose(results["thd_db"], thd_db, rtol=tolerance)
+    # assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)

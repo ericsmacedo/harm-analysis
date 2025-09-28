@@ -24,14 +24,17 @@
 
 import logging
 
+import matplotlib.pyplot as plt
 import numpy as np
+from pytest import mark
 
 from harm_analysis import dc_measurement, harm_analysis
 
 rng = np.random.default_rng()
 
 
-def test_harm_analysis():
+@mark.parametrize("plot_en", [True, False])
+def test_harm_analysis(plot_en):
     """Test for harm_analysis function.
 
     Checks if the function can obtain results with less than 0.1 dB of error.
@@ -63,7 +66,11 @@ def test_harm_analysis():
     snr_db = fund_pow_db - noise_pow_db
     thdn_db = 10 * np.log10(10 ** (noise_pow_db / 10) + 10 ** (thd_db / 10))
 
-    results = harm_analysis(x, fs=fs)
+    if plot_en:
+        fig, ax = plt.subplots()
+        results, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+    else:
+        results = harm_analysis(x, fs=fs)
 
     print("Function results:")
     for key, value in results.items():
@@ -92,7 +99,8 @@ def test_harm_analysis():
     assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
 
 
-def test_harm_analysis_dc():
+@mark.parametrize("plot_en", [True, False])
+def test_harm_analysis_dc(plot_en):
     """Test for harm_analysis function.
 
     Checks if the function can operate when DC frequency component is highest than the
@@ -125,7 +133,11 @@ def test_harm_analysis_dc():
     snr_db = fund_pow_db - noise_pow_db
     thdn_db = 10 * np.log10(10 ** (noise_pow_db / 10) + 10 ** (thd_db / 10))
 
-    results = harm_analysis(x, fs=fs)
+    if plot_en:
+        fig, ax = plt.subplots()
+        results, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+    else:
+        results = harm_analysis(x, fs=fs)
 
     print("Function results:")
     for key, value in results.items():
@@ -280,7 +292,6 @@ def test_dc_measurement():
     n = 2**18
     fs = 1000
     t = np.arange(0, n / fs, 1 / fs)
-    bw = 250
 
     noise_pow_db = -70
     harm_pow = 0.01**2 / 2
@@ -297,7 +308,7 @@ def test_dc_measurement():
 
     x = dc_level + 0.01 * np.cos(2 * np.pi * f1 * 2 * t) + noise
 
-    results = dc_measurement(x, bw=bw, fs=fs)
+    results = dc_measurement(x, fs=fs)
 
     print("Function results:")
     for key, value in results.items():
@@ -315,7 +326,7 @@ def test_dc_measurement():
 
     assert np.isclose(results["dc"], dc_level, rtol=tolerance)
     assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], thdn_db - 3, rtol=tolerance)
+    assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
 
 
 if __name__ == "__main__":
