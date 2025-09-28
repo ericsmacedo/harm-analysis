@@ -25,8 +25,42 @@ import sys
 
 import numpy as np
 from matplotlib.axes import Axes
+from numpy.lib.stride_tricks import as_strided
 from numpy.typing import NDArray
 from scipy import signal
+
+
+def _rolling_median_vec(x, window_size):
+    """Compute rolling median of a 1D array using vectorized striding.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input 1D array.
+    window_size : int
+        Size of the sliding window (must be odd).
+
+    Returns:
+    -------
+    medians : ndarray
+        Array of the same length as x with rolling medians.
+    """
+    if window_size % 2 == 0:
+        raise ValueError("window_size must be odd")
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+
+    k = window_size // 2
+    # Reflect padding at both ends
+    x_pad = np.r_[x[k:0:-1], x, x[-2 : -k - 2 : -1]]
+
+    # Build a sliding window view
+    shape = (len(x), window_size)
+    strides = (x_pad.strides[0], x_pad.strides[0])
+    windows = as_strided(x_pad, shape=shape, strides=strides)
+
+    # Median along the window dimension
+    return np.median(windows, axis=1)
 
 
 def _arg_x_as_expected(value):
@@ -369,6 +403,38 @@ def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
         return 10 * np.log10(total_int_noise)
 
 
+def _find_tones(x, enbw_bins, bw_bins):
+    x_db = 10 * np.log10(x)
+
+    # TODO: decide which number is appropriate for the median window
+    rol_median = _rolling_median_vec(x_db, 101) + 16
+
+    peaks, _ = signal.find_peaks(
+        x_db,
+        distance=6,
+        height=rol_median,
+        prominence=10,
+    )
+
+    if len(peaks) > 0:
+        tones_bins = np.concatenate([_find_freq_bins(x_db, int(loc)) for loc in peaks])
+
+        breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
+        bin_groups = np.split(tones_bins, breaks)
+
+        tones_loc = np.empty(len(peaks))
+        tones_amp = np.empty(len(peaks))
+        for i, bins in enumerate(bin_groups):
+            tones_loc[i] = np.average(bins, weights=x_db[bins])
+            tones_amp[i] = _power_from_bins(x, bins, enbw_bins, bw_bins)
+    else:
+        tones_bins = None
+        tones_loc = None
+        tones_amp = None
+
+    return tones_loc, tones_amp, tones_bins
+
+
 def _annotate(ax, x, y, text):
     ax.annotate(
         str(text),
@@ -397,6 +463,8 @@ def _plot(  # noqa: PLR0913
     harm_freq: None | NDArray[np.float64] = None,
     fund_bins: None | NDArray[np.float64] = None,
     harm_bins: None | NDArray[np.float64] = None,
+    tones_freq: None | NDArray[np.float64] = None,
+    tones_bins: None | NDArray[np.float64] = None,
 ):
     x_db = 10 * np.log10(x)
 
@@ -423,6 +491,19 @@ def _plot(  # noqa: PLR0913
                 x_marker = harm_freq[i]
                 y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
                 _annotate(ax, x_marker, y_marker, f"{i + 1}")
+
+    if tones_bins is not None:
+        tones_array = _mask_array(x_db, tones_bins)
+        ax.plot(freq_array, tones_array, label="Tones")
+
+        if tones_freq is not None:
+            breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
+            bin_groups = np.split(tones_bins, breaks)
+
+            for i, bins in enumerate(bin_groups):
+                x_marker = tones_freq[i]
+                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
+                _annotate(ax, x_marker, y_marker, f"T{i}")
 
     # if harm_freq is not None:
     #    for i in range(len(harm_freq)):
@@ -695,12 +776,21 @@ def dc_measurement(  # noqa: PLR0913
 
     """
     x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
+    sig_len = len(x)
 
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
 
+    tones_loc, tones_amp, tones_bins = _find_tones(x, enbw_bins=enbw_bins, bw_bins=bw_bins)
+
+    if tones_loc is not None:
+        tones_freq = tones_loc * fs / sig_len
+
     # Obtain noise bins, by removing the DC bins from the bin list
-    noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), dc_bins)
+    if tones_bins is not None:
+        noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), np.concatenate((dc_bins, tones_bins)))
+    else:
+        noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), dc_bins)
 
     dc_power = _power_from_bins(x_fft_pow, dc_bins, enbw_bins, bw_bins)
     noise_power = _power_from_bins(x_fft_pow, noise_bins, enbw_bins, bw_bins)
@@ -732,6 +822,8 @@ def dc_measurement(  # noqa: PLR0913
         int_noise=int_noise,
         enbw_bins=enbw_bins,
         bw_bins=bw_bins,
+        tones_freq=tones_freq,
+        tones_bins=tones_bins,
     )
 
     return results, ax
