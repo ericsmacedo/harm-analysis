@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import EngFormatter
 
-from ._harm_analysis import dc_measurement, harm_analysis
+from ._harm_analysis import harm_analysis, spec_analysis
 
 
 @click.command()
@@ -48,11 +48,11 @@ def cli(filename, fs, plot, sep, sfactor, dc):  # noqa: PLR0913
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))
         if dc:
-            results, ax[1] = dc_measurement(file_data, fs=fs, plot=True, ax=ax[1])
+            results, ax[1] = spec_analysis(file_data, fs=fs, plot=True, ax=ax[1])
         else:
             results, ax[1] = harm_analysis(file_data, fs=fs, plot=True, ax=ax[1])
     elif dc:
-        results = dc_measurement(file_data, fs=fs)
+        results = spec_analysis(file_data, fs=fs)
     else:
         results = harm_analysis(file_data, fs=fs, plot=False)
 

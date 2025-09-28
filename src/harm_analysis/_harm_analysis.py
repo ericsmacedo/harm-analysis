@@ -701,7 +701,7 @@ def harm_analysis(  # noqa: PLR0913
     return results, ax
 
 
-def dc_measurement(  # noqa: PLR0913
+def spec_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],
     fs: float = 1,
     bw: float | None = None,

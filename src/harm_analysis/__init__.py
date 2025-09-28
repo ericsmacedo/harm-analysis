@@ -21,9 +21,9 @@
 # SOFTWARE.
 """Harmonic Analysis."""
 
-from ._harm_analysis import dc_measurement, harm_analysis
+from ._harm_analysis import harm_analysis, spec_analysis
 
 __all__ = [
-    "dc_measurement",
     "harm_analysis",
+    "spec_analysis",
 ]

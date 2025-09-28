@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark
 
-from harm_analysis import dc_measurement
+from harm_analysis import spec_analysis
 
 rng = np.random.default_rng()
 
@@ -58,9 +58,9 @@ def test_harm_analysis(plot_en):
     # Use the harm_analysis function
     if plot_en:
         fig, ax = plt.subplots()
-        dc_measurement(x, fs=fs, plot=True, ax=ax)
+        spec_analysis(x, fs=fs, plot=True, ax=ax)
     else:
-        dc_measurement(x, fs=fs)
+        spec_analysis(x, fs=fs)
 
     # TODO: add assertions
     # assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
