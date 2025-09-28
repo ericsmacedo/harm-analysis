@@ -1,4 +1,4 @@
-"""Example usage of the harm_analysis function"""
+"""Example usage of the harm_analysis function."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,18 +18,18 @@ noise = np.random.normal(loc=0, scale=10 ** (-70 / 20), size=len(t))
 x = (
     noise
     + 0.1234
-    + 2 * np.cos(2 * np.pi * F1 * t)
+    + 2 * np.cos(2 * np.pi * F1 * t) # Fundamental
     + 0.01 * np.cos(2 * np.pi * F1 * 2 * t)
     + 0.005 * np.cos(2 * np.pi * F1 * 3 * t)
 )
 
 # Use the harm_analysis function
 fig, ax = plt.subplots()
-results, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+parameters, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
 
-print("Function results:")
-for key, value in results.items():
-    print(f"{key.ljust(10)} [dB]: {value}")
+print("Parameters:")
+for key, value in parameters.items():
+    print(f"{key}: {value}")
 
 # Show plot
 ax.set_title("Harmonic analysis example")

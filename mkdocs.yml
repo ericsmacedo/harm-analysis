@@ -29,11 +29,9 @@ nav:
   - Home:
       - Welcome to HARM-ANALYSIS: index.md
       - Contributing: contributing.md
-  - Usage: usage.md
+      - Usage: usage.md
   - API:
       - Overview: api.md
-      - Parser: api-parser.md
-      - Data Model: api-datamodel.md
   - Command Line Interface: cli.md
 
 plugins:

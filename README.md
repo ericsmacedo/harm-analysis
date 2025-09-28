@@ -38,3 +38,15 @@ Installing it is pretty easy:
 ```bash
 pip install harm-analysis
 ```
+
+## Example usage
+
+There are two main functions:
+
+- `harm_analysis`: for simulations with an injected tone, returning SNR, THDN, etc.
+- `spec_analysis`: for cases without an injected tone, that auto-detects DC, tones, and noise from the spectrum.
+
+
+```python
+--8<-- "examples/example_usage.py"
+```
