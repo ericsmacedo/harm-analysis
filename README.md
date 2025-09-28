@@ -22,14 +22,14 @@
 
 ## Introduction
 
-The harmonic analysis function uses an FFT to estimate the following parameters from a signal containing a tone:
+The harmonic analysis package uses FFT to estimate parameters of an input signal.
+The package provides two main functions:
 
-- THD and THD+N
-- Fundamental power and frequency location
-- Noise power
-- SNR, SINAD
-- DC level
-- Total integrated noise (everything except DC and the fundamental)
+- `harm_analysis`: for simulations with an injected tone, returning SNR, THDN, Noise, etc.
+- `spec_analysis`: for cases without an injected tone, that auto-detects DC, tones, and noise from the spectrum.
+
+See [usage](./docs/usage.md) for examples.
+
 
 ## Installation
 
@@ -37,16 +37,4 @@ Installing it is pretty easy:
 
 ```bash
 pip install harm-analysis
-```
-
-## Example usage
-
-There are two main functions:
-
-- `harm_analysis`: for simulations with an injected tone, returning SNR, THDN, etc.
-- `spec_analysis`: for cases without an injected tone, that auto-detects DC, tones, and noise from the spectrum.
-
-
-```python
---8<-- "examples/example_usage.py"
 ```
