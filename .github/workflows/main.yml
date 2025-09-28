@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.22"
+          version: "latest"
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.22"
+          version: "latest"
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
