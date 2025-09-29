@@ -1,7 +1,7 @@
 
 [![PyPI Version](https://badge.fury.io/py/harm-analysis.svg)](https://badge.fury.io/py/harm-analysis)
 [![Python Build](https://github.com/ericsmacedo/harm-analysis/actions/workflows/main.yml/badge.svg)](https://github.com/ericsmacedo/harm-analysis/actions/workflows/main.yml)
-[![Documentation](https://readthedocs.org/projects/harm-analysis/badge/?version=stable)](https://harm-analysis.readthedocs.io/en/stable/)
+[![Documentation](https://readthedocs.org/projects/harm-analysis/badge/?version=latest)](https://harm-analysis.readthedocs.io/en/latest/)
 [![Coverage Status](https://coveralls.io/repos/github/ericsmacedo/harm-analysis/badge.svg?branch=main)](https://coveralls.io/github/ericsmacedo/harm-analysis?branch=main)
 [![python-versions](https://img.shields.io/pypi/pyversions/harm-analysis.svg)](https://pypi.python.org/pypi/harm-analysis)
 [![semantic-versioning](https://img.shields.io/badge/semver-2.0.0-green)](https://semver.org/)
@@ -12,7 +12,7 @@
 
 # Harmonic Analysis package
 
-* [Documentation](https://harm-analysis.readthedocs.io/en/stable/)
+* [Documentation](https://harm-analysis.readthedocs.io/en/latest/)
 * [PyPI](https://pypi.org/project/harm-analysis/)
 * [Sources](https://github.com/ericsmacedo/harm-analysis)
 * [Issues](https://github.com/ericsmacedo/harm-analysis/issues)
