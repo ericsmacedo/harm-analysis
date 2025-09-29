@@ -7,11 +7,8 @@
 [![semantic-versioning](https://img.shields.io/badge/semver-2.0.0-green)](https://semver.org/)
 
 [![Downloads](https://img.shields.io/pypi/dm/harm-analysis.svg?label=pypi%20downloads)](https://pypi.python.org/pypi/harm-analysis)
-[![Contributors](https://img.shields.io/github/contributors/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/graphs/contributors/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)
 [![Issues](https://img.shields.io/github/issues/ericsmacedo/harm-analysis)](https://github.com/ericsmacedo/harm-analysis/issues)
-[![PRs open](https://img.shields.io/github/issues-pr/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls)
-[![PRs done](https://img.shields.io/github/issues-pr-closed/ericsmacedo/harm-analysis.svg)](https://github.com/ericsmacedo/harm-analysis/pulls?q=is%3Apr+is%3Aclosed)
 
 # Harmonic Analysis package
 
