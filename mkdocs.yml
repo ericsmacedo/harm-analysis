@@ -1,5 +1,5 @@
 site_name: "HARM-ANALYSIS"
-site_description: "Easy-To-Use SystemVerilog Parser"
+site_description: "Package for spectrum analysis."
 site_url: https://harm-analysis.readthedocs.io/en
 repo_url: https://github.com/ericsmacedo/harm-analysis
 copyright: Copyright (c) 2024 ericsmacedo
