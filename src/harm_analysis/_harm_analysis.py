@@ -80,38 +80,6 @@ def _arg_x_as_expected(value):
     return value
 
 
-def _rfft_length(n):
-    """Compute the length of the real FFT (Fast Fourier Transform) result for a given
-    signal length.
-
-    Parameters
-    ----------
-    n : int
-        The length of the input signal.
-
-    Returns:
-    -------
-    int
-        The length of the real FFT result for the input signal.
-
-    Notes:
-    -----
-    The length of the real FFT result is determined based on the input signal length:
-    - If `n` is even, the length is calculated as (n/2) + 1.
-    - If `n` is odd, the length is calculated as (n+1)/2.
-
-    Examples:
-    --------
-    >>> signal_length = 7
-    >>> result_length = rfft_length(signal_length)
-    >>> print(f"The length of np.fft.rfft(x) for a signal of length {signal_length} is: {result_length}")
-    The length of np.fft.rfft(x) for a signal of length 7 is: 4.
-    """  # noqa: D205
-    if n % 2 == 0:
-        return (n // 2) + 1
-    return (n + 1) // 2
-
-
 def _win_metrics(x):
     """Compute the coherent gain and the equivalent noise bandwidth of a window.
 
@@ -403,20 +371,33 @@ def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
         return 10 * np.log10(total_int_noise)
 
 
-def _find_tones(x, enbw_bins, bw_bins):
+def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: PLR0913
     x_db = 10 * np.log10(x)
 
-    # TODO: decide which number is appropriate for the median window
-    rol_median = _rolling_median_vec(x_db, 101) + 16
+    if height is None:
+        median_size = int(0.1 * len(x) / 2)
+        if np.mod(median_size, 2) == 0:
+            median_size += 1
+        height = _rolling_median_vec(x_db, median_size) + 16
+    else:
+        height = np.ones(x_db.size) * height
 
     peaks, _ = signal.find_peaks(
         x_db,
-        distance=6,
-        height=rol_median,
-        prominence=10,
+        distance=distance,
+        height=height,
+        prominence=prominence,
     )
 
-    if len(peaks) > 0:
+    fs_2_bin = x_db.size - 1
+
+    if x_db[-1] > height[-1]:
+        if peaks.size == 0:
+            peaks = np.array([fs_2_bin])
+        elif np.all(np.abs(peaks - fs_2_bin) > distance):
+            peaks = np.append(peaks, fs_2_bin)
+
+    if peaks.size > 0:
         tones_bins = np.concatenate([_find_freq_bins(x_db, int(loc)) for loc in peaks])
 
         breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
@@ -428,9 +409,9 @@ def _find_tones(x, enbw_bins, bw_bins):
             tones_loc[i] = np.average(bins, weights=x_db[bins])
             tones_amp[i] = _power_from_bins(x, bins, enbw_bins, bw_bins)
     else:
-        tones_bins = None
-        tones_loc = None
-        tones_amp = None
+        tones_bins = np.array([])
+        tones_loc = np.array([])
+        tones_amp = np.array([])
 
     return tones_loc, tones_amp, tones_bins
 
@@ -459,14 +440,14 @@ def _plot_spec(  # noqa: PLR0913
     enbw_bins: float,
     bw_bins: int,
     ax,
-    tones_freq: None | NDArray[np.float64] = None,
-    tones_bins: None | NDArray[np.float64] = None,
+    tones_freq: NDArray[np.float64],
+    tones_bins: NDArray[np.float64],
 ):
     x_db = 10 * np.log10(x)
 
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
-    if tones_bins is not None:
+    if tones_bins.size > 0:
         tones_array = _mask_array(x_db, tones_bins)
         ax.plot(freq_array, tones_array, label="Tones")
 
@@ -555,11 +536,9 @@ def _harm_analysis(
     x: NDArray[np.float64],
     fs: float = 1,
     bw: float | None = None,
-    window=None,
+    window: None | NDArray[np.float64] = None,
 ):
     sig_len = len(x)
-    # length of the array returned by the np.fft.rfft function
-    rfft_len = _rfft_length(sig_len)
 
     if window is None:
         window = signal.windows.hann(sig_len, sym=False)
@@ -573,7 +552,7 @@ def _harm_analysis(
 
     # Convert bw to number of bins
     if bw is None:
-        bw_bins = rfft_len - 1
+        bw_bins = x_fft_pow.size - 1
     else:
         bw_bins = np.argmin(np.abs(f_array - bw))
 
@@ -585,9 +564,9 @@ def harm_analysis(  # noqa: PLR0913
     fs: float = 1,
     bw: float | None = None,
     n_harm: int = 5,
-    window=None,
-    plot=False,
-    ax=None,
+    window: None | NDArray[np.float64] = None,
+    plot: bool = False,
+    ax: None | Axes = None,
 ):
     """Harmonic Analysis.
 
@@ -736,10 +715,12 @@ def harm_analysis(  # noqa: PLR0913
 def spec_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],
     fs: float = 1,
-    bw: float | None = None,
     window: None | NDArray[np.float64] = None,
-    plot=False,
+    plot: bool = False,
     ax: None | Axes = None,
+    distance: int = 6,
+    prominence: int = 10,
+    height: int | None = None,
 ):
     """Spectral Analysis.
 
@@ -754,8 +735,6 @@ def spec_analysis(  # noqa: PLR0913
     window : array_like, optional
         Window that will be multiplied with the signal. Default is
         Hann window.
-    bw : float, optional
-        Bandwidth to use for the calculation of the metrics, in same units as fs.
     plot : bool or None, optional
         If True, the power spectrum result is plotted. If specified,
         an `ax` must be provided, and the function returns a dictionary
@@ -769,30 +748,41 @@ def spec_analysis(  # noqa: PLR0913
     properties : dict
         A dictionary containing the analysis results
 
-        - `dc_db`: DC power in decibels (dc_db),
-        - `noise_db`: Noise power in decibels (noise_pow_db),
+        - `dc`: DC level in the same units as the input signal x.
+        - `dc_db`: DC power in decibels.
+        - `noise_db`: Noise power in decibels.
+        - `tones_amp_db`: Array with the amplitude of the detected tones in dB.
+        - `tones_freq`: Array with the frequencies of the detected tones in Hz.
+
 
     plt.axes
         If plot is set to True, the Axes used for plotting is returned.
 
     """  # noqa: D416
-    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
+    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=None, window=window)
     sig_len = len(x)
 
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
 
-    tones_loc, tones_amp, tones_bins = _find_tones(x_fft_pow, enbw_bins=enbw_bins, bw_bins=bw_bins)
+    tones_loc, tones_amp, tones_bins = _find_tones(
+        x_fft_pow,
+        enbw_bins=enbw_bins,
+        bw_bins=bw_bins,
+        distance=distance,
+        prominence=prominence,
+        height=height,
+    )
 
-    if tones_loc is not None:
+    if tones_loc.size > 0:
         tones_freq = tones_loc * fs / sig_len
         tones_amp_db = 10 * np.log10(tones_amp)
     else:
-        tones_freq = None
-        tones_amp_db = None
+        tones_freq = np.array([])
+        tones_amp_db = np.array([])
 
     # Obtain noise bins, by removing the DC bins from the bin list
-    if tones_bins is not None:
+    if tones_bins.size > 0:
         noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), np.concatenate((dc_bins, tones_bins)))
     else:
         noise_bins = np.setdiff1d(np.arange(len(x_fft_pow)), dc_bins)

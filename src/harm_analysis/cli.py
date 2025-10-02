@@ -91,7 +91,7 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
 @opt_sep
 @opt_sfactor
 def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
-    """Runs the harm_analysis function for a file containing time domain data."""
+    """Runs the spec_analysis function for a file containing time domain data."""
     # scaling factor
     file_data = np.fromfile(filename, sep=sep) * eval(sfactor)
 
@@ -113,16 +113,19 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
             continue
         table.add_row(key, str(value))
 
-    tones_table = Table(box=box.MARKDOWN, title="Tones")
-    tones_table.add_column("Tone")
-    tones_table.add_column("Amplitude [dB]")
-    tones_table.add_column("Frequency [Hz]")
+    if tones_amp_db.size == 0:
+        print("No tones detected")
+    else:
+        tones_table = Table(box=box.MARKDOWN, title="Tones")
+        tones_table.add_column("Tone")
+        tones_table.add_column("Amplitude [dB]")
+        tones_table.add_column("Frequency [Hz]")
 
-    for i, amp in enumerate(tones_amp_db):
-        tones_table.add_row(f"T{i}", str(amp), str(tones_freq[i]))
+        for i, amp in enumerate(tones_amp_db):
+            tones_table.add_row(f"T{i}", str(amp), str(tones_freq[i]))
 
-    console.print(table)
-    console.print(tones_table)
+        console.print(table)
+        console.print(tones_table)
 
     if plot is True:
         ax[1].grid(True, which="both")

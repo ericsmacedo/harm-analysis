@@ -78,3 +78,40 @@ def test_cli(monkeypatch, cli_name):
     assert "was_called" in called
 
     assert result.exit_code == 0
+
+
+def test_cli_no_tones(monkeypatch):
+    """Test for harm_analysis function.
+
+    Checks if the function can obtain results with less than 0.1 dB of error.
+    """
+    # test signal
+    n = 2048
+    fs = 1000
+    t = np.arange(0, n / fs, 1 / fs)
+
+    noise_pow_db = -70
+    noise_std = 10 ** (noise_pow_db / 20)
+    dc_level = 0.123456789
+
+    random_state = np.random.RandomState(1234567890)
+    noise = random_state.normal(loc=0, scale=noise_std, size=len(t))
+
+    x = dc_level + noise
+
+    # Save data to TXT file
+    np.savetxt("test_data_cli.txt", x, delimiter="\n")
+
+    runner = CliRunner()
+
+    called = {}
+
+    def fake_show():
+        called["was_called"] = True
+
+    monkeypatch.setattr(plt, "show", fake_show)
+
+    result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
+
+    assert result.exit_code == 0
+    assert "was_called" in called
