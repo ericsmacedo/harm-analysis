@@ -533,7 +533,7 @@ def _plot_harm(  # noqa: PLR0913
             for i, bins in enumerate(bin_groups):
                 x_marker = harm_freq[i]
                 y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
-                _annotate(ax, x_marker, y_marker, f"{i + 1}")
+                _annotate(ax, x_marker, y_marker, f"H{i + 1}")
 
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
     ax.plot(freq_array, int_noise_p_harm, label="Integrated noise (inc. harmonics)", color="green")
