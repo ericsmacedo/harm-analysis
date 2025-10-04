@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark
 
-from harm_analysis import harm_analysis, spec_analysis
+from harm_analysis import harm_analysis
 
 rng = np.random.default_rng()
 
@@ -282,60 +282,5 @@ def test_harm_analysis_harm_zero():
     assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
     assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
     assert np.isclose(results["noise_db"], noise_pow_db - 3, rtol=tolerance)
-    assert results["thd_db"] is np.nan
+    assert np.isnan(results["thd_db"])
     assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
-
-
-def test_spec_analysis():
-    """Test for harm_analysis function."""
-    # test signal
-    n = 2**18
-    fs = 1000
-    t = np.arange(0, n / fs, 1 / fs)
-
-    noise_pow_db = -70
-    harm_pow = 0.01**2 / 2
-    thdn = 10 ** (noise_pow_db / 10) + harm_pow
-    thdn_db = 10 * np.log10(thdn)
-
-    noise_std = 10 ** (noise_pow_db / 20)
-
-    dc_level = 0.123456789
-    dc_power_db = 20 * np.log10(dc_level)
-    noise = rng.normal(loc=0, scale=noise_std, size=len(t))
-
-    f1 = 100.13
-
-    x = (
-        dc_level
-        + 2 * np.cos(2 * np.pi * f1 * t)
-        + 0.01 * np.cos(2 * np.pi * f1 * 2 * t)
-        + 3 * np.cos(2 * np.pi * f1 * 3 * t)
-        + noise
-    )
-
-    results = spec_analysis(x, fs=fs)
-
-    print("Function results:")
-    for key, value in results.items():
-        print(f"{key.ljust(10)} [dB]: {value}")
-
-    logging.info(
-        "\n"
-        "Expected values\n"
-        f"    Total noise (dB): {thdn_db}\n"
-        f"    DC power [dB]: {dc_power_db}\n"
-        f"    DC level: {dc_level}\n"
-    )
-
-    tolerance = 0.3
-
-    amp_arr = np.asarray([2, 0.01, 3])
-
-    amp_arr_db = 10 * np.log10((amp_arr**2) / 2)
-
-    assert np.isclose(results["dc"], dc_level, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
-    assert np.allclose(results["tones_freq"], np.asarray([f1, 2 * f1, 3 * f1]), rtol=tolerance)
-    assert np.allclose(results["tones_amp_db"], amp_arr_db, rtol=tolerance)

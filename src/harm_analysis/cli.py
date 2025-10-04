@@ -101,7 +101,7 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
     else:
         results = spec_analysis(file_data, fs=fs)
 
-    tones_amp_db = results["tones_amp_db"]
+    tones_db = results["tones_db"]
     tones_freq = results["tones_freq"]
 
     table = Table(box=box.MARKDOWN, title="Parameters")
@@ -113,7 +113,7 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
             continue
         table.add_row(key, str(value))
 
-    if tones_amp_db.size == 0:
+    if tones_db.size == 0:
         print("No tones detected")
     else:
         tones_table = Table(box=box.MARKDOWN, title="Tones")
@@ -121,7 +121,7 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
         tones_table.add_column("Amplitude [dB]")
         tones_table.add_column("Frequency [Hz]")
 
-        for i, amp in enumerate(tones_amp_db):
+        for i, amp in enumerate(tones_db):
             tones_table.add_row(f"T{i}", str(amp), str(tones_freq[i]))
 
         console.print(table)
