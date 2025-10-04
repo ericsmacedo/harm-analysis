@@ -23,44 +23,25 @@
 
 import sys
 
+import bottleneck as bn
 import numpy as np
 from matplotlib.axes import Axes
-from numpy.lib.stride_tricks import as_strided
 from numpy.typing import NDArray
 from scipy import signal
 
 
-def _rolling_median_vec(x, window_size):
-    """Compute rolling median of a 1D array using vectorized striding.
-
-    Parameters
-    ----------
-    x : ndarray
-        Input 1D array.
-    window_size : int
-        Size of the sliding window (must be odd).
-
-    Returns:
-    -------
-    medians : ndarray
-        Array of the same length as x with rolling medians.
-    """
-    if window_size % 2 == 0:
-        raise ValueError("window_size must be odd")
-    if window_size < 1:
-        raise ValueError("window_size must be >= 1")
-
+def _rolling_median_bn(x, window_size):
+    if window_size % 2 == 0 or window_size < 1:
+        window_size += 1
     k = window_size // 2
-    # Reflect padding at both ends
-    x_pad = np.r_[x[k:0:-1], x, x[-2 : -k - 2 : -1]]
 
-    # Build a sliding window view
-    shape = (len(x), window_size)
-    strides = (x_pad.strides[0], x_pad.strides[0])
-    windows = as_strided(x_pad, shape=shape, strides=strides)
+    # reflect padding (bn.move_median doesn't center by itself)
+    x_pad = np.pad(x, k, mode="reflect")
 
-    # Median along the window dimension
-    return np.median(windows, axis=1)
+    # bn.move_median uses a centered window when you pad manually
+    out = bn.move_median(x_pad, window=window_size, min_count=window_size)
+
+    return out[window_size - 1 :]
 
 
 def _arg_x_as_expected(value):
@@ -142,7 +123,7 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     return x_fft_pow, f_array
 
 
-def _find_freq_bins(x_fft: NDArray[np.float64], freq: NDArray[np.float64]) -> NDArray[np.float64]:
+def _find_freq_bins(x: NDArray[np.float64], idx: int) -> NDArray[np.float64]:
     """Find frequency Bins of fundamental and harmonics.
 
     Finds the frequency bins of frequencies. The end/start of a frequency
@@ -152,44 +133,38 @@ def _find_freq_bins(x_fft: NDArray[np.float64], freq: NDArray[np.float64]) -> ND
 
     Arguments:
     ---------
-    x_fft:
-        Absolute value of FFT from DC to Fs/2
+    x:
+        Input signal
 
-    freq:
-        Frequency array
-
-    frequencies:
-        List of frequencies to look for.
+    idx:
+        index indicating where to look for local maxima
 
     Returns:
         list of bin bins index
     """
-    fft_length = len(x_fft)
+    x_size = x.size
 
-    # find local maximum near bin
-    dist = 3
-    idx0 = np.max(freq - dist, 0)
-    idx1 = freq + dist + 1
+    # find local max near bin
+    width = 3
+    search_start = max(0, idx - width)
+    search_end = min(x_size, idx + width + 1)
+    local_max_idx = int(np.argmax(x[search_start:search_end]) + search_start)
 
-    max_idx = np.argmax(x_fft[idx0:idx1])
-    freq = max_idx + freq - dist
+    # Search for start/end of the peak
+    start_idx = max(0, local_max_idx - 100)
+    end_idx = min(x_size, local_max_idx + 100)
 
-    start = freq
-    end = freq
-    max_n_smp = 30
-    # find end of peak (right side)
-    for i in range(fft_length - freq - 1):
-        if x_fft[freq + i] - x_fft[freq + i + 1] <= 0 or (i > max_n_smp):
-            end = freq + i + 1
-            break
+    if local_max_idx == 0:
+        peak_start = 0
+    else:
+        peak_start = np.where(np.diff(x[start_idx:local_max_idx]) < 0)[0][-1] + start_idx + 1
 
-    # find end of peak (left side)
-    for i in range(fft_length - freq - 1):
-        if (x_fft[freq - i] - x_fft[freq - (i + 1)] <= 0) or (i > max_n_smp):
-            start = freq - i
-            break
+    if local_max_idx == x_size - 1:
+        peak_end = x_size
+    else:
+        peak_end = np.where(np.diff(x[local_max_idx:end_idx]) > 0)[0][0] + local_max_idx + 1
 
-    return np.arange(start, end).astype(int)
+    return np.arange(peak_start, peak_end).astype(int)
 
 
 def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
@@ -375,10 +350,7 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: P
     x_db = 10 * np.log10(x)
 
     if height is None:
-        median_size = int(0.1 * len(x) / 2)
-        if np.mod(median_size, 2) == 0:
-            median_size += 1
-        height = _rolling_median_vec(x_db, median_size) + 16
+        height = _rolling_median_bn(x_db, 51) + 16
     else:
         height = np.ones(x_db.size) * height
 
