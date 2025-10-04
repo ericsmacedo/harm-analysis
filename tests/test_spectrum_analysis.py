@@ -31,8 +31,8 @@ rng = np.random.default_rng()
 
 
 @mark.parametrize("plot_en", [True, False])
-def test_harm_analysis(plot_en):
-    """Test for harm_analysis function.
+def test_spec_analysis(plot_en):
+    """Test for spec_analysis function.
 
     Checks if the function can obtain results with less than 0.1 dB of error.
     """

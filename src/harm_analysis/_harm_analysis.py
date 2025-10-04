@@ -123,7 +123,7 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     return x_fft_pow, f_array
 
 
-def _find_freq_bins(x: NDArray[np.float64], idx: int) -> NDArray[np.float64]:
+def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float) -> NDArray[np.float64]:
     """Find frequency Bins of fundamental and harmonics.
 
     Finds the frequency bins of frequencies. The end/start of a frequency
@@ -133,14 +133,28 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int) -> NDArray[np.float64]:
 
     Arguments:
     ---------
-    x:
+    x: NDArray
         Input signal
 
-    idx:
+    idx: int
         index indicating where to look for local maxima
 
+    bw_bins: int
+        Bandwidth to consider when calculating parameters
+
+    enbw_bins: float
+        Equivalent noise bandwidth of the window used, in bins.
+
     Returns:
-        list of bin bins index
+        bins: NDArray
+            list of bins of peak
+
+        peak_loc: float
+            Location of the bin. Calculated using a weighted average of the peak bins
+
+        peak_val: float
+            power of the peak.
+
     """
     x_size = x.size
 
@@ -164,7 +178,13 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int) -> NDArray[np.float64]:
     else:
         peak_end = np.where(np.diff(x[local_max_idx:end_idx]) > 0)[0][0] + local_max_idx + 1
 
-    return np.arange(peak_start, peak_end).astype(int)
+    bins = np.arange(peak_start, peak_end)
+
+    # Estimate precise location using a weighted average
+    peak_loc = np.average(bins, weights=x[bins])
+    peak_val = _power_from_bins(x, bins, enbw_bins=enbw_bins, bw_bins=bw_bins)
+
+    return peak_val, peak_loc, bins
 
 
 def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
@@ -187,7 +207,7 @@ def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
     return np.argmax(np.diff(x_fft[:50]) > 0) + 1
 
 
-def _find_bins(x, n_harm, bw_bins):
+def _find_bins(x, n_harm, bw_bins, enbw_bins):
     """Find all bins that belong to the fundamental, harmonics, DC, and noise.
 
     Parameters
@@ -201,19 +221,6 @@ def _find_bins(x, n_harm, bw_bins):
     n_harm : int
         Number of harmonics to find
 
-    Returns:
-    -------
-    fund_bins : ndarray
-        Bins of fundamental frequency
-    harm_loc : ndarray
-        Locations of harmonics
-    harm_bins : ndarray
-        Bins of harmonics
-    dc_bins : ndarray
-        Bins of DC component
-    noise_bins : ndarray
-        Bins of noise
-
     Notes:
     -----
     This function only works for the right-sided power spectrum (positive frequencies
@@ -222,6 +229,7 @@ def _find_bins(x, n_harm, bw_bins):
     # Index of last dc bin
     dc_end = _find_dc_bins(x)
     dc_bins = np.arange(dc_end)
+    dc_pow = np.sum(x[dc_bins])
 
     if bw_bins <= dc_end:
         sys.exit("Error: max bandwidth is too low and is inside the detected dc bins.")
@@ -231,42 +239,61 @@ def _find_bins(x, n_harm, bw_bins):
     max_loc = np.argmax(x[dc_end:bw_bins]) + dc_end
 
     # list containing bins of fundamental
-    fund_bins = _find_freq_bins(x, max_loc)
-
-    # Estimate precise location using a weighted average
-    fund_loc = np.average(fund_bins, weights=x[fund_bins])
+    fund_pow, fund_loc, fund_bins = _find_freq_bins(x, max_loc, bw_bins=bw_bins, enbw_bins=enbw_bins)
 
     # THD+N bins (all bins excluding DC and the fundamental)
     thdn_bins = np.setdiff1d(np.arange(len(x)), np.concatenate((fund_bins, dc_bins)))
 
-    harm_loc, harm_bins = _find_harm(x, fund_loc, n_harm, bw_bins)
+    harm_pow, harm_loc, harm_bins = _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins=enbw_bins)
 
     # Remaining bins are considered noise.
-    if harm_bins is None:
-        noise_bins = thdn_bins
-    else:
+    if harm_bins.size > 0:
         noise_bins = np.setdiff1d(thdn_bins, harm_bins)
+    else:
+        noise_bins = thdn_bins
 
-    return fund_loc, fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins
+    noise_pow = _power_from_bins(x, noise_bins, enbw_bins=enbw_bins, bw_bins=bw_bins)
+
+    # According to wikipedia, THD+N in dB is equal to
+    # 10*log10(sum(harmonics power + Noise power)/fundamental power).
+    # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
+    thdn_pow = _power_from_bins(x, thdn_bins, enbw_bins=enbw_bins, bw_bins=bw_bins) / fund_pow
+
+    return (
+        (fund_pow, fund_loc, fund_bins),
+        (harm_pow, harm_loc, harm_bins),
+        (dc_pow, dc_bins),
+        (noise_pow, noise_bins),
+        (thdn_pow, thdn_bins),
+    )
 
 
-def _find_harm(x, fund_loc, n_harm, bw_bins):
+def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
     if n_harm <= 0:
-        harm_bins = None
-        harm_loc = None
+        harm_loc = np.array([])
+        harm_pow = np.array([])
+        harm_bins = np.array([])
     else:
         # calculate the frequency of the harmonics.
         # frequencies > fs/2 are ignored
         harm_loc = fund_loc * np.arange(2, n_harm + 2)
         harm_loc = harm_loc[harm_loc <= bw_bins]
 
-        if harm_loc.size != 0:
-            harm_bins = np.concatenate([_find_freq_bins(x, int(loc)) for loc in harm_loc])
-        else:
-            harm_bins = None
-            harm_loc = None
+        harm_loc_list = []
+        harm_pow_list = []
+        harm_bins_list = []
+        if harm_loc.size > 0:
+            for loc in harm_loc:
+                harm_pow, harm_loc, harm_bins = _find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins)
+                harm_loc_list.append(harm_loc)
+                harm_pow_list.append(harm_pow)
+                harm_bins_list.append(harm_bins)
 
-    return harm_loc, harm_bins
+        harm_loc = np.asarray(harm_loc_list)
+        harm_pow = np.asarray(harm_pow_list)
+        harm_bins = np.hstack(harm_bins_list)
+
+    return harm_pow, harm_loc, harm_bins
 
 
 def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
@@ -347,12 +374,13 @@ def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
 
 
 def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: PLR0913
+    x_size = x.size
     x_db = 10 * np.log10(x)
 
     if height is None:
         height = _rolling_median_bn(x_db, 51) + 16
     else:
-        height = np.ones(x_db.size) * height
+        height = np.ones(x_size) * height
 
     peaks, _ = signal.find_peaks(
         x_db,
@@ -361,7 +389,7 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: P
         prominence=prominence,
     )
 
-    fs_2_bin = x_db.size - 1
+    fs_2_bin = x_size - 1
 
     if x_db[-1] > height[-1]:
         if peaks.size == 0:
@@ -454,39 +482,35 @@ def _plot_harm(  # noqa: PLR0913
     noise_bins: NDArray[np.float64],
     int_noise: NDArray[np.float64],
     int_noise_p_harm: NDArray[np.float64],
-    enbw_bins: float,
     bw_bins: int,
     ax,
-    fund_freq: None | float = None,
-    harm_freq: None | NDArray[np.float64] = None,
-    fund_bins: None | NDArray[np.float64] = None,
-    harm_bins: None | NDArray[np.float64] = None,
+    fund_pow_db: float,
+    fund_freq: float,
+    fund_bins: NDArray[np.float64],
+    harm_bins: NDArray[np.float64],
+    harm_freq: NDArray[np.float64],
+    harm_pow_db: NDArray[np.float64],
 ):
     x_db = 10 * np.log10(x)
 
     fund_array = _mask_array(x_db, fund_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
-    if fund_bins is not None:
+    if fund_bins.size > 0:
         ax.plot(freq_array, fund_array, label="Fundamental")
 
-    if fund_freq is not None:
         x_marker = fund_freq
-        y_marker = 10 * np.log10(np.sum(x[fund_bins] / enbw_bins))
+        y_marker = fund_pow_db
         _annotate(ax, x_marker, y_marker, "F")
 
-    if harm_bins is not None:
+    if harm_bins.size > 0:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics")
 
-        if harm_freq is not None:
-            breaks = np.where(np.diff(harm_bins) > 1)[0] + 1
-            bin_groups = np.split(harm_bins, breaks)
-
-            for i, bins in enumerate(bin_groups):
-                x_marker = harm_freq[i]
-                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
-                _annotate(ax, x_marker, y_marker, f"H{i + 1}")
+        for i in range(harm_pow_db.size):
+            x_marker = harm_freq[i]
+            y_marker = harm_pow_db[i]
+            _annotate(ax, x_marker, y_marker, f"H{i + 1}")
 
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
     ax.plot(freq_array, int_noise_p_harm, label="Integrated noise (inc. harmonics)", color="green")
@@ -616,18 +640,15 @@ def harm_analysis(  # noqa: PLR0913
 
     sig_len = len(x)
 
-    fund_loc, fund_bins, harm_loc, harm_bins, dc_bins, noise_bins, thdn_bins = _find_bins(
-        x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins
+    fund_info, harm_info, dc_info, noise_info, thdn_info = _find_bins(
+        x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins, enbw_bins=enbw_bins
     )
 
-    fund_power = _power_from_bins(x_fft_pow, fund_bins, enbw_bins, bw_bins)
-    dc_power = _power_from_bins(x_fft_pow, dc_bins, enbw_bins, bw_bins)
-    noise_power = _power_from_bins(x_fft_pow, noise_bins, enbw_bins, bw_bins)
-
-    # According to wikipedia, THD+N in dB is equal to
-    # 10*log10(sum(harmonics power + Noise power)/fundamental power).
-    # THD+N is recriprocal to SINAD (SINAD_dB = -THD+N_dB)
-    thdn_power = _power_from_bins(x_fft_pow, thdn_bins, enbw_bins, bw_bins) / fund_power
+    fund_pow, fund_loc, fund_bins = fund_info
+    harm_pow, harm_loc, harm_bins = harm_info
+    dc_pow, dc_bins = dc_info
+    noise_pow, noise_bins = noise_info
+    thdn_pow, thdn_bins = thdn_info
 
     # total integrated noise curve
     int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=noise_bins)
@@ -635,25 +656,27 @@ def harm_analysis(  # noqa: PLR0913
 
     # Calculate THD, Signal Power and N metrics in dB
     sig_freq = fund_loc * fs / sig_len
-    dc_db = 10 * np.log10(dc_power)
-    sig_pow_db = 10 * np.log10(fund_power)
-    noise_pow_db = 10 * np.log10(noise_power)
-    thdn_db = 10 * np.log10(thdn_power)
+    harm_freq = harm_loc * fs / sig_len
+    dc_db = 10 * np.log10(dc_pow)
+    sig_pow_db = 10 * np.log10(fund_pow)
+    noise_pow_db = 10 * np.log10(noise_pow)
+    harm_pow_db = 10 * np.log10(harm_pow)
+    thdn_db = 10 * np.log10(thdn_pow)
     snr_db = sig_pow_db - noise_pow_db
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
-    if harm_bins is not None:
-        harm_power = _power_from_bins(x_fft_pow, harm_bins, enbw_bins, bw_bins)
-        thd_db = 10 * np.log10(harm_power / fund_power)
+    if harm_bins.size > 0:
+        thd_db = 10 * np.log10(np.sum(harm_pow) / fund_pow)
         harm_freq = harm_loc * fs / sig_len
     else:
-        harm_power = np.nan
         thd_db = np.nan
         harm_freq = None
 
     results = {
         "fund_db": sig_pow_db,
         "fund_freq": sig_freq,
+        "harm_freq": harm_freq,
+        "harm_pow_db": harm_pow_db,
         "dc_db": dc_db,
         "noise_db": noise_pow_db,
         "thd_db": thd_db,
@@ -668,16 +691,17 @@ def harm_analysis(  # noqa: PLR0913
     ax = _plot_harm(
         x=x_fft_pow,
         fund_freq=sig_freq,
-        harm_freq=harm_freq,
         freq_array=f_array,
         dc_bins=dc_bins,
         fund_bins=fund_bins,
+        fund_pow_db=sig_pow_db,
         harm_bins=harm_bins,
+        harm_freq=harm_freq,
+        harm_pow_db=harm_pow_db,
         noise_bins=noise_bins,
         ax=ax,
         int_noise=int_noise,
         int_noise_p_harm=int_noise_p_harm,
-        enbw_bins=enbw_bins,
         bw_bins=bw_bins,
     )
 
