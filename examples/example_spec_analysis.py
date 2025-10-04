@@ -1,4 +1,4 @@
-"""Example usage of the harm_analysis function"""
+"""Example usage of the spec_analysis function."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,8 +30,8 @@ results, ax = spec_analysis(x, fs=fs, plot=True, ax=ax)
 
 print("Function results:")
 for key, value in results.items():
-    print(f"{key.ljust(10)} [dB]: {value}")
+    print(f"{key}: {value}")
 
 # Show plot
-ax.set_title("Harmonic analysis example")
-plt.show()
+ax.set_title("Spectrum analysis example")
+fig.savefig("./docs/images/example_spec_analysis.png")

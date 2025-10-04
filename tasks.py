@@ -75,6 +75,17 @@ def test(c):
 
 
 @task
+def update_examples(c):
+    """[All] Run Unittests via pytest."""
+    run_cmd(c, f"{ENV} ./examples/example_usage.py > examples/example_usage.md", force_color=False)
+    run_cmd(
+        c,
+        f"{ENV} ./examples/example_spec_analysis.py > examples/example_spec_analysis.md",
+        force_color=False,
+    )
+
+
+@task
 def test2ref(c):
     """Run tests and update refdata."""
     run_cmd(c, "touch .test2ref", force_color=True)
