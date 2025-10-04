@@ -18,7 +18,7 @@ noise = np.random.normal(loc=0, scale=10 ** (-70 / 20), size=len(t))
 x = (
     noise
     + 0.1234
-    + 2 * np.cos(2 * np.pi * F1 * t) # Fundamental
+    + 2 * np.cos(2 * np.pi * F1 * t)  # Fundamental
     + 0.01 * np.cos(2 * np.pi * F1 * 2 * t)
     + 0.005 * np.cos(2 * np.pi * F1 * 3 * t)
 )
@@ -33,4 +33,4 @@ for key, value in parameters.items():
 
 # Show plot
 ax.set_title("Harmonic analysis example")
-plt.show()
+fig.savefig("./docs/images/example_usage.png")
