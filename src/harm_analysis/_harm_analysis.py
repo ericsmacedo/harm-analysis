@@ -737,6 +737,13 @@ def spec_analysis(  # noqa: PLR0913
         an `ax` must be provided, and the function returns a dictionary
         with the results and the specified axes (`ax`). If plot is not set,
         only the results are returned.
+    distance: number, optional
+        Required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
+        Smaller peaks are removed first until the condition is fulfilled for all remaining peaks.
+    prominence: number or ndarray, optional
+        Required prominence of peaks in dB. Either a number, None, or an array matching x
+    height: number or ndarray or sequence, optional
+        Required height of peaks in dB. Either a number, None, an array matching x.
     ax : plt.Axes or None, optional
         Axes to be used for plotting. Required if plot is set to True.
 
