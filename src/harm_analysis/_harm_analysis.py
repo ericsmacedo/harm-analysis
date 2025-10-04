@@ -123,7 +123,7 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     return x_fft_pow, f_array
 
 
-def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float) -> NDArray[np.float64]:
+def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float):
     """Find frequency Bins of fundamental and harmonics.
 
     Finds the frequency bins of frequencies. The end/start of a frequency
@@ -397,23 +397,26 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: P
         elif np.all(np.abs(peaks - fs_2_bin) > distance):
             peaks = np.append(peaks, fs_2_bin)
 
-    if peaks.size > 0:
-        tones_bins = np.concatenate([_find_freq_bins(x_db, int(loc)) for loc in peaks])
-
-        breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
-        bin_groups = np.split(tones_bins, breaks)
-
-        tones_loc = np.empty(len(peaks))
-        tones_amp = np.empty(len(peaks))
-        for i, bins in enumerate(bin_groups):
-            tones_loc[i] = np.average(bins, weights=x_db[bins])
-            tones_amp[i] = _power_from_bins(x, bins, enbw_bins, bw_bins)
-    else:
-        tones_bins = np.array([])
+    if peaks.size == 0:
+        tones_pow = np.array([])
         tones_loc = np.array([])
-        tones_amp = np.array([])
+        tones_bins = np.array([])
 
-    return tones_loc, tones_amp, tones_bins
+    else:
+        tones_pow_list = []
+        tones_loc_list = []
+        tones_bins_list = []
+        for loc in peaks:
+            tone_pow, tone_loc, tone_bins = _find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins)
+            tones_pow_list.append(tone_pow)
+            tones_loc_list.append(tone_loc)
+            tones_bins_list.append(tone_bins)
+
+        tones_pow = np.asarray(tones_pow_list)
+        tones_loc = np.asarray(tones_loc_list)
+        tones_bins = np.hstack(tones_bins_list)
+
+    return tones_pow, tones_loc, tones_bins
 
 
 def _annotate(ax, x, y, text):
@@ -437,11 +440,11 @@ def _plot_spec(  # noqa: PLR0913
     dc_bins: NDArray[np.float64],
     noise_bins: NDArray[np.float64],
     int_noise: NDArray[np.float64],
-    enbw_bins: float,
     bw_bins: int,
     ax,
     tones_freq: NDArray[np.float64],
     tones_bins: NDArray[np.float64],
+    tones_db: NDArray[np.float64],
 ):
     x_db = 10 * np.log10(x)
 
@@ -451,14 +454,10 @@ def _plot_spec(  # noqa: PLR0913
         tones_array = _mask_array(x_db, tones_bins)
         ax.plot(freq_array, tones_array, label="Tones")
 
-        if tones_freq is not None:
-            breaks = np.where(np.diff(tones_bins) > 1)[0] + 1
-            bin_groups = np.split(tones_bins, breaks)
-
-            for i, bins in enumerate(bin_groups):
-                x_marker = tones_freq[i]
-                y_marker = 10 * np.log10(np.sum(x[bins] / enbw_bins))
-                _annotate(ax, x_marker, y_marker, f"T{i}")
+        for i in range(tones_db.size):
+            x_marker = tones_freq[i]
+            y_marker = tones_db[i]
+            _annotate(ax, x_marker, y_marker, f"T{i}")
 
     ax.plot(freq_array, dc_noise_array, label="DC and Noise", color="black")
     ax.plot(freq_array, int_noise, label="Integrated noise", color="green")
@@ -528,7 +527,7 @@ def _plot_harm(  # noqa: PLR0913
     return ax
 
 
-def _harm_analysis(
+def _power_spectrum(
     x: NDArray[np.float64],
     fs: float = 1,
     bw: float | None = None,
@@ -636,7 +635,7 @@ def harm_analysis(  # noqa: PLR0913
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
     """  # noqa: D416
-    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=bw, window=window)
+    x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=bw, window=window)
 
     sig_len = len(x)
 
@@ -755,13 +754,13 @@ def spec_analysis(  # noqa: PLR0913
         If plot is set to True, the Axes used for plotting is returned.
 
     """  # noqa: D416
-    x_fft_pow, f_array, enbw_bins, bw_bins = _harm_analysis(x, fs=fs, bw=None, window=window)
+    x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=None, window=window)
     sig_len = len(x)
 
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
 
-    tones_loc, tones_amp, tones_bins = _find_tones(
+    tones_pow, tones_loc, tones_bins = _find_tones(
         x_fft_pow,
         enbw_bins=enbw_bins,
         bw_bins=bw_bins,
@@ -770,12 +769,8 @@ def spec_analysis(  # noqa: PLR0913
         height=height,
     )
 
-    if tones_loc.size > 0:
-        tones_freq = tones_loc * fs / sig_len
-        tones_amp_db = 10 * np.log10(tones_amp)
-    else:
-        tones_freq = np.array([])
-        tones_amp_db = np.array([])
+    tones_freq = tones_loc * fs / sig_len
+    tones_db = 10 * np.log10(tones_pow)
 
     # Obtain noise bins, by removing the DC bins from the bin list
     if tones_bins.size > 0:
@@ -798,7 +793,7 @@ def spec_analysis(  # noqa: PLR0913
         "dc": dc,
         "dc_db": dc_db,
         "noise_db": noise_pow_db,
-        "tones_amp_db": tones_amp_db,
+        "tones_db": tones_db,
         "tones_freq": tones_freq,
     }
 
@@ -811,10 +806,10 @@ def spec_analysis(  # noqa: PLR0913
         noise_bins=noise_bins,
         ax=ax,
         int_noise=int_noise,
-        enbw_bins=enbw_bins,
         bw_bins=bw_bins,
         tones_freq=tones_freq,
         tones_bins=tones_bins,
+        tones_db=tones_db,
     )
 
     return results, ax
