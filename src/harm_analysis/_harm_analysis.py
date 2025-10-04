@@ -607,12 +607,14 @@ def harm_analysis(  # noqa: PLR0913
         - `fund_freq` Frequency of the fundamental tone.
         - `dc_db`: DC power in decibels.
         - `noise_db`: Noise power in decibels.
+        - `harm_db`: Harmonics power in decibels.
+        - `harm_freq`: Harmonics frequency in Hz.
         - `thd_db`: Total harmonic distortion in decibels. Returns `numpy.nan` if
         `n_harm` is 0 or if all harmonics are outside the bandwidth.
         - `snr_db`: Signal-to-noise ratio in decibels.
         - `sinad_db`: Signal-to-noise-and-distortion ratio in decibels.
         - `thdn_db`: Total harmonic distortion plus noise in decibels.
-        - `total_noise_and_dist`: Total noise and distortion in decibels.
+        - `total_noise_and_dist_db`: Total noise and distortion in decibels.
 
     ax : matplotlib axes
         If plot is set to True, the Axes used for plotting is returned.
@@ -657,11 +659,11 @@ def harm_analysis(  # noqa: PLR0913
     sig_freq = fund_loc * fs / sig_len
     harm_freq = harm_loc * fs / sig_len
     dc_db = 10 * np.log10(dc_pow)
-    sig_pow_db = 10 * np.log10(fund_pow)
-    noise_pow_db = 10 * np.log10(noise_pow)
-    harm_pow_db = 10 * np.log10(harm_pow)
+    sig_db = 10 * np.log10(fund_pow)
+    noise_db = 10 * np.log10(noise_pow)
+    harm_db = 10 * np.log10(harm_pow)
     thdn_db = 10 * np.log10(thdn_pow)
-    snr_db = sig_pow_db - noise_pow_db
+    snr_db = sig_db - noise_db
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
     if harm_bins.size > 0:
@@ -672,17 +674,17 @@ def harm_analysis(  # noqa: PLR0913
         harm_freq = None
 
     results = {
-        "fund_db": sig_pow_db,
+        "fund_db": sig_db,
         "fund_freq": sig_freq,
         "harm_freq": harm_freq,
-        "harm_pow_db": harm_pow_db,
+        "harm_db": harm_db,
         "dc_db": dc_db,
-        "noise_db": noise_pow_db,
+        "noise_db": noise_db,
         "thd_db": thd_db,
         "snr_db": snr_db,
         "sinad_db": -thdn_db,
         "thdn_db": thdn_db,
-        "total_noise_and_dist": int_noise[-1],
+        "total_noise_and_dist_db": int_noise[-1],
     }
 
     if plot is False:
@@ -693,10 +695,10 @@ def harm_analysis(  # noqa: PLR0913
         freq_array=f_array,
         dc_bins=dc_bins,
         fund_bins=fund_bins,
-        fund_pow_db=sig_pow_db,
+        fund_pow_db=sig_db,
         harm_bins=harm_bins,
         harm_freq=harm_freq,
-        harm_pow_db=harm_pow_db,
+        harm_pow_db=harm_db,
         noise_bins=noise_bins,
         ax=ax,
         int_noise=int_noise,
@@ -746,7 +748,7 @@ def spec_analysis(  # noqa: PLR0913
         - `dc`: DC level in the same units as the input signal x.
         - `dc_db`: DC power in decibels.
         - `noise_db`: Noise power in decibels.
-        - `tones_amp_db`: Array with the amplitude of the detected tones in dB.
+        - `tones_db`: Array with the amplitude of the detected tones in dB.
         - `tones_freq`: Array with the frequencies of the detected tones in Hz.
 
 
@@ -787,12 +789,12 @@ def spec_analysis(  # noqa: PLR0913
     # Calculate THD, Signal Power and N metrics in dB
     dc_db = 10 * np.log10(dc_power)
     dc = 10 ** (dc_db / 20)
-    noise_pow_db = 10 * np.log10(noise_power)
+    noise_db = 10 * np.log10(noise_power)
 
     results = {
         "dc": dc,
         "dc_db": dc_db,
-        "noise_db": noise_pow_db,
+        "noise_db": noise_db,
         "tones_db": tones_db,
         "tones_freq": tones_freq,
     }
