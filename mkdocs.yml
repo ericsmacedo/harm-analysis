@@ -61,7 +61,7 @@ plugins:
             # preload_modules: [pydantic]
             inherited_members: false
             docstring_style: numpy
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
 
 markdown_extensions:
