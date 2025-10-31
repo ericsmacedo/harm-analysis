@@ -171,12 +171,22 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: f
     if local_max_idx == 0:
         peak_start = 0
     else:
-        peak_start = np.where(np.diff(x[start_idx:local_max_idx]) < 0)[0][-1] + start_idx + 1
+        d_start = np.diff(x[start_idx:local_max_idx])
+        starts = np.where(d_start < 0)[0]
+        if starts.size == 0:
+            peak_start = start_idx
+        else:
+            peak_start = starts[-1] + start_idx + 1
 
     if local_max_idx == x_size - 1:
         peak_end = x_size
     else:
-        peak_end = np.where(np.diff(x[local_max_idx:end_idx]) > 0)[0][0] + local_max_idx + 1
+        d_end = np.diff(x[local_max_idx:end_idx])
+        ends = np.where(d_end > 0)[0]
+        if ends.size == 0:
+            peak_end = end_idx
+        else:
+            peak_end = ends[0] + local_max_idx + 1
 
     bins = np.arange(peak_start, peak_end)
 
