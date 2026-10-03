@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ from matplotlib.ticker import EngFormatter
 from rich.console import Console
 from rich.table import Table, box
 
-from ._harm_analysis import harm_analysis, spec_analysis
+from . import harm_analysis, spec_analysis
 
 console = Console()
 

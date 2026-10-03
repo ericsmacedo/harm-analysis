@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,8 @@
 # SOFTWARE.
 """Harmonic Analysis."""
 
-from ._harm_analysis import harm_analysis, spec_analysis
+from ._harmonic import harm_analysis
+from ._spectral import spec_analysis
 
 __all__ = [
     "harm_analysis",
