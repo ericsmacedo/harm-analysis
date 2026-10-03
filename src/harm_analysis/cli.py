@@ -28,7 +28,7 @@ from matplotlib.ticker import EngFormatter
 from rich.console import Console
 from rich.table import Table, box
 
-from ._harm_analysis import harm_analysis, spec_analysis
+from . import harm_analysis, spec_analysis
 
 console = Console()
 
