@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,7 @@ def _annotate(ax, x, y, text):
         arrowprops={"arrowstyle": "-", "color": "brown"},
     )
 
+
 def _plot_spec(  # noqa: PLR0913
     x: NDArray[np.float64],
     freq_array: NDArray[np.float64],
@@ -79,6 +80,7 @@ def _plot_spec(  # noqa: PLR0913
     ax.set_xlabel("[Hz]")
 
     return ax
+
 
 def _plot_harm(  # noqa: PLR0913
     x: NDArray[np.float64],

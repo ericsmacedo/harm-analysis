@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -50,6 +50,7 @@ def _rolling_median_bn(x, window_size):
 
     return out[window_size - 1 :]
 
+
 def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: PLR0913
     x_size = x.size
     x_db = 10 * np.log10(x)
@@ -94,6 +95,7 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: P
         tones_bins = np.hstack(tones_bins_list)
 
     return tones_pow, tones_loc, tones_bins
+
 
 def spec_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],

@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -97,6 +97,7 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins):
         (thdn_pow, thdn_bins),
     )
 
+
 def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
     if n_harm <= 0:
         harm_loc = np.array([])
@@ -123,6 +124,7 @@ def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
         harm_bins = np.hstack(harm_bins_list)
 
     return harm_pow, harm_loc, harm_bins
+
 
 def harm_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],

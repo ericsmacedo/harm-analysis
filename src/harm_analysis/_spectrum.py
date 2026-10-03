@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 ericsmacedo
+# Copyright (c) 2025-2026 ericsmacedo
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,7 @@ def _win_metrics(x):
 
     return coherent_gain, eq_noise_bw
 
+
 def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: float = 1, coherent_gain: float = 1):
     """Calculate the single-sided power spectrum of the input signal.
 
@@ -85,6 +86,7 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     x_fft_pow[1:] *= 2
 
     return x_fft_pow, f_array
+
 
 def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float):
     """Find frequency Bins of fundamental and harmonics.
@@ -159,6 +161,7 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: f
 
     return peak_val, peak_loc, bins
 
+
 def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
     """Find DC bins of FFT output.
 
@@ -177,6 +180,7 @@ def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
     """
     # Stop if DC is not found after 50 samples
     return np.argmax(np.diff(x_fft[:50]) > 0) + 1
+
 
 def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
     """Calculate the power given the power spectrum and an array of bins.
@@ -214,6 +218,7 @@ def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
         return None
     return np.sum(x_fft_pow[bins]) / enbw_bins
 
+
 def _mask_array(x, idx_list):
     """Mask an array so that only the values at the specified indices are valid.
 
@@ -243,6 +248,7 @@ def _mask_array(x, idx_list):
     mask[idx_list] = True
     return np.ma.masked_array(x, mask=~mask)
 
+
 def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
     total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)
@@ -251,6 +257,7 @@ def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
     # calculation
     with np.errstate(divide="ignore"):
         return 10 * np.log10(total_int_noise)
+
 
 def _power_spectrum(
     x: NDArray[np.float64],
