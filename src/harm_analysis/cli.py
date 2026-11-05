@@ -21,6 +21,8 @@
 # SOFTWARE.
 """CLI for harm_analysis."""
 
+from fractions import Fraction
+
 import click
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,6 +34,15 @@ from . import harm_analysis, spec_analysis
 
 console = Console()
 
+
+def _parse_sfactor(ctx, param, value):  # noqa: ARG001
+    """Parse a scaling factor such as ``5``, ``0.5`` or ``1/8`` without using ``eval``."""
+    try:
+        return float(Fraction(value))
+    except (ValueError, ZeroDivisionError) as exc:
+        raise click.BadParameter(f"{value!r} is not a valid number or fraction (e.g. 5, 0.5, 1/8)") from exc
+
+
 arg_filepath = click.argument("filename", type=click.Path(exists=True, readable=True))
 opt_fs = click.option("--fs", default=1.0, help="Sampling frequency.")
 opt_sep = click.option("--sep", default=" ", help="Separator between items.")
@@ -39,6 +50,7 @@ opt_plot = click.option("--plot", is_flag=True, help="Plot the power spectrum of
 opt_sfactor = click.option(
     "--sfactor",
     default="1",
+    callback=_parse_sfactor,
     help="Scaling factor to apply to the data.  Examples: 1/8, 5, etc",
 )
 
@@ -52,7 +64,7 @@ opt_sfactor = click.option(
 def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
     """Runs the harm_analysis function for a file containing time domain data."""
     # scaling factor
-    file_data = np.fromfile(filename, sep=sep) * eval(sfactor)
+    file_data = np.fromfile(filename, sep=sep) * sfactor
 
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))
@@ -93,7 +105,7 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
 def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
     """Runs the spec_analysis function for a file containing time domain data."""
     # scaling factor
-    file_data = np.fromfile(filename, sep=sep) * eval(sfactor)
+    file_data = np.fromfile(filename, sep=sep) * sfactor
 
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))

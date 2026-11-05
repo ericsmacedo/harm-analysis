@@ -27,7 +27,7 @@ import numpy as np
 from click.testing import CliRunner
 from pytest import mark
 
-from harm_analysis.cli import harm_analysis_cmd, spec_analysis_cmd
+from harm_analysis.cli import _parse_sfactor, harm_analysis_cmd, spec_analysis_cmd
 
 
 @mark.parametrize("cli_name", ["harm", "spec"])
@@ -115,3 +115,22 @@ def test_cli_no_tones(monkeypatch):
 
     assert result.exit_code == 0
     assert "was_called" in called
+
+
+@mark.parametrize("cmd", [harm_analysis_cmd, spec_analysis_cmd])
+@mark.parametrize("sfactor", ["__import__('os').getcwd()", "1/0", "abc"])
+def test_cli_invalid_sfactor(tmp_path, cmd, sfactor):
+    """Invalid scaling factors are rejected instead of being evaluated."""
+    path = tmp_path / "data.txt"
+    np.savetxt(path, np.arange(16.0), delimiter="\n")
+
+    result = CliRunner().invoke(cmd, [str(path), "--sfactor", sfactor])
+
+    assert result.exit_code == 2
+    assert "not a valid number or fraction" in result.output
+
+
+@mark.parametrize(("sfactor", "expected"), [("5", 5.0), ("0.5", 0.5), ("1/8", 0.125)])
+def test_cli_sfactor_parsing(sfactor, expected):
+    """Integers, decimals and fractions are accepted."""
+    assert _parse_sfactor(None, None, sfactor) == expected
