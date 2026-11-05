@@ -24,7 +24,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
-from ._spectrum import _mask_array
+from ._spectrum import _mask_array, _to_db
 
 
 def _annotate(ax, x, y, text):
@@ -54,7 +54,7 @@ def _plot_spec(  # noqa: PLR0913
     tones_bins: NDArray[np.float64],
     tones_db: NDArray[np.float64],
 ):
-    x_db = 10 * np.log10(x)
+    x_db = _to_db(x)
 
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))
 
@@ -98,7 +98,7 @@ def _plot_harm(  # noqa: PLR0913
     harm_freq: NDArray[np.float64],
     harm_pow_db: NDArray[np.float64],
 ):
-    x_db = 10 * np.log10(x)
+    x_db = _to_db(x)
 
     fund_array = _mask_array(x_db, fund_bins)
     dc_noise_array = _mask_array(x_db, np.concatenate((dc_bins, noise_bins)))

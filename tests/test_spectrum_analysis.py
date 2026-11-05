@@ -22,12 +22,14 @@
 # SOFTWARE.
 
 import logging
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark
 
 from harm_analysis import spec_analysis
+from harm_analysis._spectrum import _to_db
 
 rng = np.random.default_rng()
 
@@ -123,3 +125,22 @@ def test_spec_analysis_plot(plot_en):
         spec_analysis(x, fs=fs, plot=True, ax=ax)
     else:
         spec_analysis(x, fs=fs)
+
+
+@mark.filterwarnings("error")
+def test_spec_analysis_zero_signal():
+    """An all-zero signal reports -inf dB instead of raising warnings."""
+    results = spec_analysis(np.zeros(2048))
+
+    assert results["dc_db"] == -np.inf
+    assert results["noise_db"] == -np.inf
+    assert results["tones_db"].size == 0
+
+
+def test_to_db_zero():
+    """_to_db returns -inf for zero power without raising warnings."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert _to_db(0.0) == -np.inf
+        assert _to_db(1.0) == 0.0
+        assert _to_db(np.array([0.0, 10.0])).tolist() == [-np.inf, 10.0]

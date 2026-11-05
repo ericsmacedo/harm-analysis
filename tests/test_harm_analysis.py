@@ -26,7 +26,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pytest import mark
+from pytest import mark, raises
 
 from harm_analysis import harm_analysis
 
@@ -284,3 +284,20 @@ def test_harm_analysis_harm_zero():
     assert np.isclose(results["noise_db"], noise_pow_db - 3, rtol=tolerance)
     assert np.isnan(results["thd_db"])
     assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
+
+
+@mark.parametrize("x", [np.zeros(2048), np.ones(2048)], ids=["zeros", "dc_only"])
+def test_harm_analysis_constant_signal(x):
+    """A constant signal has no tone, so a clear error is raised."""
+    with raises(ValueError, match="No fundamental tone found"):
+        harm_analysis(x)
+
+
+@mark.filterwarnings("error")
+def test_harm_analysis_no_harmonics_no_warning():
+    """With n_harm=0, THD is NaN and no warnings are raised."""
+    n = 2048
+    x = np.cos(2 * np.pi * 101 * np.arange(n) / n)
+    results = harm_analysis(x, n_harm=0)
+    assert np.isnan(results["thd_db"])
+    assert np.isfinite(results["fund_db"])
