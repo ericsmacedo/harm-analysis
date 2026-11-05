@@ -31,7 +31,7 @@ from pytest import mark
 from harm_analysis import spec_analysis
 from harm_analysis._spectrum import _to_db
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(1234567890)
 
 
 def test_spec_analysis():

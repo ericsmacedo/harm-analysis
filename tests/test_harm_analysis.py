@@ -30,7 +30,7 @@ from pytest import mark, raises
 
 from harm_analysis import harm_analysis
 
-rng = np.random.default_rng()
+rng = np.random.default_rng(1234567890)
 
 
 @mark.parametrize("plot_en", [True, False])
