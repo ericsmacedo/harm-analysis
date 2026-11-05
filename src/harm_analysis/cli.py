@@ -93,7 +93,10 @@ opt_sfactor = click.option(
     "--sfactor",
     default="1",
     callback=_parse_sfactor,
-    help="Scaling factor to apply to the data. Supports + - * /, parentheses, 1e5 and log2. Examples: 1/8, 1e-3, log2(256)/2",
+    help=(
+        "Scaling factor to apply to the data. Supports + - * /, parentheses, 1e5 and log2. "
+        "Examples: 1/8, 1e-3, log2(256)/2"
+    ),
 )
 
 
