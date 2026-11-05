@@ -118,7 +118,10 @@ def test_cli_no_tones(monkeypatch):
 
 
 @mark.parametrize("cmd", [harm_analysis_cmd, spec_analysis_cmd])
-@mark.parametrize("sfactor", ["__import__('os').getcwd()", "1/0", "abc"])
+@mark.parametrize(
+    "sfactor",
+    ["__import__('os').getcwd()", "1/0", "abc", "2**3", "log2(0)", "log2(1, 2)", "sin(1)", "1e999", "True", "(1"],
+)
 def test_cli_invalid_sfactor(tmp_path, cmd, sfactor):
     """Invalid scaling factors are rejected instead of being evaluated."""
     path = tmp_path / "data.txt"
@@ -127,10 +130,24 @@ def test_cli_invalid_sfactor(tmp_path, cmd, sfactor):
     result = CliRunner().invoke(cmd, [str(path), "--sfactor", sfactor])
 
     assert result.exit_code == 2
-    assert "not a valid number or fraction" in result.output
+    assert "Invalid value for '--sfactor'" in result.output
 
 
-@mark.parametrize(("sfactor", "expected"), [("5", 5.0), ("0.5", 0.5), ("1/8", 0.125)])
+@mark.parametrize(
+    ("sfactor", "expected"),
+    [
+        ("5", 5.0),
+        ("0.5", 0.5),
+        ("1/8", 0.125),
+        ("1e5", 1e5),
+        ("2.5E-3", 2.5e-3),
+        ("-3", -3.0),
+        ("log2(1024)", 10.0),
+        ("log2(8)/3 + 1", 2.0),
+        ("(1+2)*3 - 4/2", 7.0),
+        (" 1e3 / 4 ", 250.0),
+    ],
+)
 def test_cli_sfactor_parsing(sfactor, expected):
     """Integers, decimals and fractions are accepted."""
     assert _parse_sfactor(None, None, sfactor) == expected
