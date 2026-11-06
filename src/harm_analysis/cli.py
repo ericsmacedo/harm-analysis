@@ -166,12 +166,14 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
     table.add_column("value", style="magenta")
 
     for key, value in results.items():
-        if key in {"tones_amp_db", "tones_freq"}:
+        if key in {"tones_db", "tones_freq"}:
             continue
         table.add_row(key, str(value))
 
+    console.print(table)
+
     if tones_db.size == 0:
-        print("No tones detected")
+        console.print("No tones detected")
     else:
         tones_table = Table(box=box.MARKDOWN, title="Tones")
         tones_table.add_column("Tone")
@@ -181,7 +183,6 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
         for i, amp in enumerate(tones_db):
             tones_table.add_row(f"T{i}", str(amp), str(tones_freq[i]))
 
-        console.print(table)
         console.print(tones_table)
 
     if plot is True:
