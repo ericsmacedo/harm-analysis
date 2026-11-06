@@ -151,3 +151,39 @@ def test_cli_invalid_sfactor(tmp_path, cmd, sfactor):
 def test_cli_sfactor_parsing(sfactor, expected):
     """Integers, decimals and fractions are accepted."""
     assert _parse_sfactor(None, None, sfactor) == expected
+
+
+def _run_spec_cli(tmp_path, x):
+    path = tmp_path / "data.txt"
+    np.savetxt(path, x, delimiter="\n")
+    return CliRunner().invoke(spec_analysis_cmd, [str(path), "--fs", "1000"])
+
+
+def test_spec_cli_with_tones(tmp_path):
+    """Tones are listed in the Tones table only, not in the main table."""
+    n = 2**14
+    rng = np.random.default_rng(1)
+    x = 0.1 + np.cos(2 * np.pi * 0.1013 * np.arange(n)) + rng.normal(0, 1e-3, n)
+
+    result = _run_spec_cli(tmp_path, x)
+
+    assert result.exit_code == 0
+    assert "Parameters" in result.output
+    assert "Tones" in result.output
+    assert "T0" in result.output
+    assert "tones_db" not in result.output
+    assert "tones_freq" not in result.output
+    assert "No tones detected" not in result.output
+
+
+def test_spec_cli_without_tones(tmp_path):
+    """The Parameters table is still shown when no tones are detected."""
+    rng = np.random.default_rng(1)
+    x = 0.1 + rng.normal(0, 1e-3, 2**14)
+
+    result = _run_spec_cli(tmp_path, x)
+
+    assert result.exit_code == 0
+    assert "Parameters" in result.output
+    assert "noise_db" in result.output
+    assert "No tones detected" in result.output
