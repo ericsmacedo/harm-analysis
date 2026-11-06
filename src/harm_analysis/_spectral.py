@@ -34,6 +34,7 @@ from ._spectrum import (
     _int_noise_curve,
     _power_from_bins,
     _power_spectrum,
+    _to_db,
 )
 
 
@@ -53,7 +54,7 @@ def _rolling_median_bn(x, window_size):
 
 def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: PLR0913
     x_size = x.size
-    x_db = 10 * np.log10(x)
+    x_db = _to_db(x)
 
     if height is None:
         height = _rolling_median_bn(x_db, 51) + 16
@@ -167,7 +168,7 @@ def spec_analysis(  # noqa: PLR0913
     )
 
     tones_freq = tones_loc * fs / sig_len
-    tones_db = 10 * np.log10(tones_pow)
+    tones_db = _to_db(tones_pow)
 
     # Obtain noise bins, by removing the DC bins from the bin list
     if tones_bins.size > 0:
@@ -182,9 +183,9 @@ def spec_analysis(  # noqa: PLR0913
     int_noise = _int_noise_curve(x=x_fft_pow / enbw_bins, noise_bins=noise_bins)
 
     # Calculate THD, Signal Power and N metrics in dB
-    dc_db = 10 * np.log10(dc_power)
+    dc_db = _to_db(dc_power)
     dc = 10 ** (dc_db / 20)
-    noise_db = 10 * np.log10(noise_power)
+    noise_db = _to_db(noise_power)
 
     results = {
         "dc": dc,

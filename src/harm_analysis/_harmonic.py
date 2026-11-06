@@ -34,6 +34,7 @@ from ._spectrum import (
     _int_noise_curve,
     _power_from_bins,
     _power_spectrum,
+    _to_db,
 )
 
 
@@ -191,6 +192,13 @@ def harm_analysis(  # noqa: PLR0913
     ax : matplotlib axes
         If plot is set to True, the Axes used for plotting is returned.
 
+    Powers of zero are reported as ``-inf`` dB (no warning is raised).
+
+    Raises
+    ------
+    ValueError
+        If the input signal is constant (all zeros or DC only), as there is no tone to analyze.
+
     Notes:
     -----
     The function fails if the fundamental is not the highest spectral component in the
@@ -209,6 +217,9 @@ def harm_analysis(  # noqa: PLR0913
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
     """  # noqa: D416
+    if np.ptp(x) == 0:
+        raise ValueError("No fundamental tone found: the input signal is constant (all zeros or DC only).")
+
     x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=bw, window=window)
 
     sig_len = len(x)
@@ -230,16 +241,16 @@ def harm_analysis(  # noqa: PLR0913
     # Calculate THD, Signal Power and N metrics in dB
     sig_freq = fund_loc * fs / sig_len
     harm_freq = harm_loc * fs / sig_len
-    dc_db = 10 * np.log10(dc_pow)
-    sig_db = 10 * np.log10(fund_pow)
-    noise_db = 10 * np.log10(noise_pow)
-    harm_db = 10 * np.log10(harm_pow)
-    thdn_db = 10 * np.log10(thdn_pow)
+    dc_db = _to_db(dc_pow)
+    sig_db = _to_db(fund_pow)
+    noise_db = _to_db(noise_pow)
+    harm_db = _to_db(harm_pow)
+    thdn_db = _to_db(thdn_pow)
     snr_db = sig_db - noise_db
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
     if harm_bins.size > 0:
-        thd_db = 10 * np.log10(np.sum(harm_pow) / fund_pow)
+        thd_db = _to_db(np.sum(harm_pow) / fund_pow)
         harm_freq = harm_loc * fs / sig_len
     else:
         thd_db = np.nan

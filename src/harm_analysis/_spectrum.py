@@ -249,14 +249,17 @@ def _mask_array(x, idx_list):
     return np.ma.masked_array(x, mask=~mask)
 
 
+def _to_db(power):
+    """Convert power to decibels, returning ``-inf`` (without warnings) for a power of 0."""
+    with np.errstate(divide="ignore"):
+        return 10 * np.log10(power)
+
+
 def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
     total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)
 
-    # The with statement removes warnings about divide-by-zero in the log10
-    # calculation
-    with np.errstate(divide="ignore"):
-        return 10 * np.log10(total_int_noise)
+    return _to_db(total_int_noise)
 
 
 def _power_spectrum(
