@@ -255,7 +255,7 @@ def _to_db(power):
         return 10 * np.log10(power)
 
 
-def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.float64]):
+def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.integer]):
     total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)
 

@@ -58,7 +58,7 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins):
     only).
     """
     # Index of last dc bin
-    dc_end = _find_dc_bins(x)
+    dc_end = int(_find_dc_bins(x))
     dc_bins = np.arange(dc_end)
     dc_pow = np.sum(x[dc_bins])
 
@@ -67,7 +67,7 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins):
 
     # the fundamental frequency is found by searching for the bin with the
     # maximum value, excluding DC
-    max_loc = np.argmax(x[dc_end:bw_bins]) + dc_end
+    max_loc = int(np.argmax(x[dc_end:bw_bins])) + dc_end
 
     # list containing bins of fundamental
     fund_pow, fund_loc, fund_bins = _find_freq_bins(x, max_loc, bw_bins=bw_bins, enbw_bins=enbw_bins)

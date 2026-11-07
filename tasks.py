@@ -97,8 +97,8 @@ def test2ref(c):
 
 @task
 def checktypes(c):
-    """[All] Run Type-Checking via mypy."""
-    run_cmd(c, f"{ENV} mypy .", force_color=True)
+    """[All] Run Type-Checking via ty."""
+    run_cmd(c, f"{ENV} ty check", force_color=True)
 
 
 @task
