@@ -45,13 +45,13 @@ def _annotate(ax, x, y, text):
 def _plot_spec(  # noqa: PLR0913
     x: NDArray[np.float64],
     freq_array: NDArray[np.float64],
-    dc_bins: NDArray[np.float64],
-    noise_bins: NDArray[np.float64],
+    dc_bins: NDArray[np.integer],
+    noise_bins: NDArray[np.integer],
     int_noise: NDArray[np.float64],
     bw_bins: int,
     ax,
     tones_freq: NDArray[np.float64],
-    tones_bins: NDArray[np.float64],
+    tones_bins: NDArray[np.integer],
     tones_db: NDArray[np.float64],
 ):
     x_db = _to_db(x)
@@ -85,17 +85,17 @@ def _plot_spec(  # noqa: PLR0913
 def _plot_harm(  # noqa: PLR0913
     x: NDArray[np.float64],
     freq_array: NDArray[np.float64],
-    dc_bins: NDArray[np.float64],
-    noise_bins: NDArray[np.float64],
+    dc_bins: NDArray[np.integer],
+    noise_bins: NDArray[np.integer],
     int_noise: NDArray[np.float64],
     int_noise_p_harm: NDArray[np.float64],
     bw_bins: int,
     ax,
     fund_pow_db: float,
     fund_freq: float,
-    fund_bins: NDArray[np.float64],
-    harm_bins: NDArray[np.float64],
-    harm_freq: NDArray[np.float64],
+    fund_bins: NDArray[np.integer],
+    harm_bins: NDArray[np.integer],
+    harm_freq: NDArray[np.float64] | None,
     harm_pow_db: NDArray[np.float64],
 ):
     x_db = _to_db(x)
@@ -110,7 +110,7 @@ def _plot_harm(  # noqa: PLR0913
         y_marker = fund_pow_db
         _annotate(ax, x_marker, y_marker, "F")
 
-    if harm_bins.size > 0:
+    if harm_bins.size > 0 and harm_freq is not None:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics")
 

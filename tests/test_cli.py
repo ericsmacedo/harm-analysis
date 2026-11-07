@@ -71,9 +71,9 @@ def test_cli(monkeypatch, cli_name):
     monkeypatch.setattr(plt, "show", fake_show)
 
     if cli_name == "harm":
-        result = runner.invoke(harm_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
+        result = runner.invoke(harm_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
     elif cli_name == "spec":
-        result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
+        result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
 
     assert "was_called" in called
 
@@ -111,7 +111,7 @@ def test_cli_no_tones(monkeypatch):
 
     monkeypatch.setattr(plt, "show", fake_show)
 
-    result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", fs, "--plot"])
+    result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
 
     assert result.exit_code == 0
     assert "was_called" in called
