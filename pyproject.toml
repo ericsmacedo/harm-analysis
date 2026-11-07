@@ -190,4 +190,3 @@ exclude_lines = [
     'pragma: no cover',
     'assert False',
 ]
-
