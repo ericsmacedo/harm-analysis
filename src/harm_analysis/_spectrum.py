@@ -25,6 +25,59 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy import signal
 
+MIN_SIGNAL_LENGTH = 32
+
+
+def _validate_inputs(x, fs, window=None, bw=None, n_harm=None) -> NDArray[np.float64]:
+    """Check the inputs of the analysis functions and return `x` as a float array.
+
+    Raises:
+    ------
+    TypeError
+        If `x` (or `window`) is complex or not numeric.
+    ValueError
+        If `x` is not 1-D, is shorter than ``MIN_SIGNAL_LENGTH`` samples or contains
+        NaN or infinite values; if `fs` is not a positive finite number; if `window`
+        does not have the same length as `x` or is not finite; if `bw` is not in
+        ``(0, fs / 2]``; or if `n_harm` is negative.
+    """
+    x = _as_real_array(x, "x")
+    if x.ndim != 1:
+        raise ValueError(f"`x` must be a 1-D array, got an array with shape {x.shape}.")
+    if x.size < MIN_SIGNAL_LENGTH:
+        raise ValueError(f"`x` must have at least {MIN_SIGNAL_LENGTH} samples, got {x.size}.")
+    if not np.all(np.isfinite(x)):
+        raise ValueError("`x` contains NaN or infinite values.")
+
+    if not (np.isfinite(fs) and fs > 0):
+        raise ValueError(f"`fs` must be a positive finite number, got {fs}.")
+
+    if window is not None:
+        window = _as_real_array(window, "window")
+        if window.shape != x.shape:
+            raise ValueError(f"`window` must have the same length as `x` ({x.size}), got shape {window.shape}.")
+        if not np.all(np.isfinite(window)):
+            raise ValueError("`window` contains NaN or infinite values.")
+
+    if bw is not None and not (np.isfinite(bw) and 0 < bw <= fs / 2):
+        raise ValueError(f"`bw` must be in (0, fs / 2] = (0, {fs / 2}], got {bw}.")
+
+    if n_harm is not None and n_harm < 0:
+        raise ValueError(f"`n_harm` must be 0 or positive, got {n_harm}.")
+
+    return x
+
+
+def _as_real_array(value, name: str) -> NDArray[np.float64]:
+    """Convert to a float array, rejecting complex and non-numeric input."""
+    arr = np.asarray(value)
+    if np.iscomplexobj(arr):
+        raise TypeError(f"`{name}` must be real; complex input is not supported.")
+    try:
+        return arr.astype(np.float64)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"`{name}` must be numeric, got dtype {arr.dtype}.") from exc
+
 
 def _win_metrics(x):
     """Compute the coherent gain and the equivalent noise bandwidth of a window.

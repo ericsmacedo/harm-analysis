@@ -36,6 +36,7 @@ from ._spectrum import (
     _power_from_bins,
     _power_spectrum,
     _to_db,
+    _validate_inputs,
 )
 
 
@@ -145,12 +146,18 @@ def spec_analysis(  # noqa: PLR0913
 
     Raises
     ------
+    TypeError
+        If `x` or `window` is complex or not numeric.
     ValueError
-        If `plot` is True and no `ax` is given.
+        If `plot` is True and no `ax` is given, or if an input is invalid: `x` not
+        1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive, or
+        `window` not the same length as `x`.
 
     """  # noqa: D416
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")
+
+    x = _validate_inputs(x, fs, window=window)
 
     x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=None, window=window)
     sig_len = len(x)
