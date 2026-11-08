@@ -183,7 +183,7 @@ def harm_analysis(  # noqa: PLR0913
         - `harm_db`: Harmonics power in decibels.
         - `harm_freq`: Harmonics frequency in Hz.
         - `thd_db`: Total harmonic distortion in decibels. Returns `numpy.nan` if
-        `n_harm` is 0 or if all harmonics are outside the bandwidth.
+          `n_harm` is 0 or if all harmonics are outside the bandwidth.
         - `snr_db`: Signal-to-noise ratio in decibels.
         - `sinad_db`: Signal-to-noise-and-distortion ratio in decibels.
         - `thdn_db`: Total harmonic distortion plus noise in decibels.

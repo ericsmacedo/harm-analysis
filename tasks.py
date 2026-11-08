@@ -103,14 +103,14 @@ def checktypes(c):
 
 @task
 def doc(c):
-    """[All] Build Documentation via mkdocs."""
-    run_cmd(c, f"{ENV} mkdocs build --strict", force_color=True)
+    """[All] Build Documentation via Sphinx."""
+    run_cmd(c, f"{ENV} sphinx-build -W --keep-going -b html docs site", force_color=True)
 
 
 @task
 def doc_serve(c):
-    """Start Local Documentation Server via mkdocs."""
-    run_cmd(c, f"{ENV} mkdocs serve --no-strict", force_color=True)
+    """Build Documentation via Sphinx and serve it locally."""
+    run_cmd(c, f"{ENV} python -m http.server --directory site 8000", force_color=True)
 
 
 @task

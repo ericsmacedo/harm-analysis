@@ -1,3 +1,5 @@
+# Usage
+
 
 There are two main functions:
 
@@ -9,28 +11,28 @@ There are two main functions:
 
 This example generates a tone with noise, harmonics and a DC value.
 
-```python
---8<-- "examples/example_usage.py"
+```{literalinclude} ../examples/example_usage.py
+:language: python
 ```
 
 outputs:
 
-``` title="examples/example_usage.md"
---8<-- "examples/example_usage.md"
+```{literalinclude} ../examples/example_usage.md
+:language: text
 ```
 
 ![example_usage.py output plot](./images/example_usage.png)
 
 ## `spec_analysis` example usage
 
-```python
---8<-- "examples/example_spec_analysis.py"
+```{literalinclude} ../examples/example_spec_analysis.py
+:language: python
 ```
 
 outputs:
 
-``` title="examples/example_spec_analysis.md"
---8<-- "examples/example_spec_analysis.md"
+```{literalinclude} ../examples/example_spec_analysis.md
+:language: text
 ```
 
 ![example_spec_analysis.py output plot](images/example_spec_analysis.png)
