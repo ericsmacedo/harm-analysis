@@ -105,6 +105,9 @@ def checktypes(c):
 def doc(c):
     """[All] Build Documentation via Sphinx."""
     run_cmd(c, f"{ENV} sphinx-build -W --keep-going -b html docs site", force_color=True)
+    # Plain-text build, used to generate llms.txt and llms-full.txt for LLMs and AI tools
+    run_cmd(c, f"{ENV} sphinx-build -W --keep-going -q -b text docs build/llms-text", force_color=True)
+    run_cmd(c, f"{ENV} python docs/make_llms_txt.py build/llms-text site", force_color=True)
 
 
 @task

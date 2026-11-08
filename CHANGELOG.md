@@ -34,6 +34,9 @@ This release contains breaking changes and will be released as 2.0.0.
 - `--sfactor` accepts arithmetic expressions: numbers (including `1e5`),
   `+ - * /`, parentheses and `log2`. ([#22](https://github.com/ericsmacedo/harm-analysis/pull/22))
 - `py.typed` marker, so type checkers use the package's type hints.
+- `llms.txt` and `llms-full.txt` (see [llmstxt.org](https://llmstxt.org)) at the root of
+  the documentation site, so LLMs and AI tools can read the docs, including the
+  API reference, as plain text.
 
 ### Fixed
 
