@@ -28,6 +28,7 @@ from numpy.typing import NDArray
 from scipy import signal
 
 from ._plotting import _plot_spec
+from ._results import SpecResult
 from ._spectrum import (
     _find_dc_bins,
     _find_freq_bins,
@@ -107,7 +108,7 @@ def spec_analysis(  # noqa: PLR0913
     distance: int = 6,
     prominence: int = 10,
     height: int | None = None,
-):
+) -> SpecResult:
     """Spectral Analysis.
 
     Auto-detects DC, tones, and noise from the spectrum.
@@ -121,11 +122,10 @@ def spec_analysis(  # noqa: PLR0913
     window : array_like, optional
         Window that will be multiplied with the signal. Default is
         Hann window.
-    plot : bool or None, optional
-        If True, the power spectrum result is plotted. If specified,
-        an `ax` must be provided, and the function returns a dictionary
-        with the results and the specified axes (`ax`). If plot is not set,
-        only the results are returned.
+    plot : bool, optional
+        If True, the power spectrum is plotted on `ax`. The caller keeps the
+        reference to `ax` and can keep customizing it after the call (title,
+        scale, limits, etc.).
     distance: number, optional
         Required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
         Smaller peaks are removed first until the condition is fulfilled for all remaining peaks.
@@ -133,25 +133,25 @@ def spec_analysis(  # noqa: PLR0913
         Required prominence of peaks in dB. Either a number, None, or an array matching x
     height: number or ndarray or sequence, optional
         Required height of peaks in dB. Either a number, None, an array matching x.
-    ax : plt.Axes or None, optional
-        Axes to be used for plotting. Required if plot is set to True.
+    ax : matplotlib.axes.Axes or None, optional
+        Axes to plot on. Required if `plot` is True.
 
     Returns
     -------
-    properties : dict
-        A dictionary containing the analysis results
+    SpecResult
+        The analysis results (DC, noise and the detected tones). See
+        :class:`SpecResult` for the fields. Use :meth:`SpecResult.to_dict` to get
+        them as a dictionary.
 
-        - `dc`: DC level in the same units as the input signal x.
-        - `dc_db`: DC power in decibels.
-        - `noise_db`: Noise power in decibels.
-        - `tones_db`: Array with the amplitude of the detected tones in dB.
-        - `tones_freq`: Array with the frequencies of the detected tones in Hz.
-
-
-    plt.axes
-        If plot is set to True, the Axes used for plotting is returned.
+    Raises
+    ------
+    ValueError
+        If `plot` is True and no `ax` is given.
 
     """  # noqa: D416
+    if plot and ax is None:
+        raise ValueError("An `ax` must be provided when `plot` is True.")
+
     x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=None, window=window)
     sig_len = len(x)
 
@@ -187,17 +187,18 @@ def spec_analysis(  # noqa: PLR0913
     dc = 10 ** (dc_db / 20)
     noise_db = _to_db(noise_power)
 
-    results = {
-        "dc": dc,
-        "dc_db": dc_db,
-        "noise_db": noise_db,
-        "tones_db": tones_db,
-        "tones_freq": tones_freq,
-    }
+    results = SpecResult(
+        dc=float(dc),
+        dc_db=float(dc_db),
+        noise_db=float(noise_db),
+        tones_db=np.asarray(tones_db, dtype=np.float64),
+        tones_freq=np.asarray(tones_freq, dtype=np.float64),
+    )
 
-    if plot is False:
+    if not plot:
         return results
-    ax = _plot_spec(
+
+    _plot_spec(
         x=x_fft_pow,
         freq_array=f_array,
         dc_bins=dc_bins,
@@ -210,4 +211,4 @@ def spec_analysis(  # noqa: PLR0913
         tones_db=tones_db,
     )
 
-    return results, ax
+    return results

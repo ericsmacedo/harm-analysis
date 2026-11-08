@@ -28,6 +28,7 @@ from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 from ._plotting import _plot_harm
+from ._results import HarmResult
 from ._spectrum import (
     _find_dc_bins,
     _find_freq_bins,
@@ -135,7 +136,7 @@ def harm_analysis(  # noqa: PLR0913
     window: None | NDArray[np.float64] = None,
     plot: bool = False,
     ax: None | Axes = None,
-):
+) -> HarmResult:
     """Harmonic Analysis.
 
     Calculates SNR, THD, Fundamental power, and Noise power of the input signal x.
@@ -161,45 +162,29 @@ def harm_analysis(  # noqa: PLR0913
         Bandwidth to use for the calculation of the metrics, in same units as fs.
         Also useful to filter another tone (or noise) with amplitude greater than the
         fundamental and located above a certain frequency (see shaped noise example).
-    plot : bool or None, optional
-        If True, the power spectrum result is plotted. If specified,
-        an `ax` must be provided, and the function returns a dictionary
-        with the results and the specified axes (`ax`). If plot is not set,
-        only the results are returned.
-    ax : plt.Axes or None, optional
-        Axes to be used for plotting. Required if plot is set to True.
-
+    plot : bool, optional
+        If True, the power spectrum is plotted on `ax`. The caller keeps the
+        reference to `ax` and can keep customizing it after the call (title,
+        scale, limits, etc.).
+    ax : matplotlib.axes.Axes or None, optional
+        Axes to plot on. Required if `plot` is True.
 
     Returns
     -------
-    properties: dict
+    HarmResult
+        The analysis results (fundamental, harmonics, DC, noise, THD, SNR, SINAD and
+        THD+N). See :class:`HarmResult` for the fields. Use
+        :meth:`HarmResult.to_dict` to get them as a dictionary.
 
-        Dictionary containing the analysis results
-
-        - `fund_db`: Fundamental power in decibels.
-        - `fund_freq` Frequency of the fundamental tone.
-        - `dc_db`: DC power in decibels.
-        - `noise_db`: Noise power in decibels.
-        - `harm_db`: Harmonics power in decibels.
-        - `harm_freq`: Harmonics frequency in Hz.
-        - `thd_db`: Total harmonic distortion in decibels. Returns `numpy.nan` if
-          `n_harm` is 0 or if all harmonics are outside the bandwidth.
-        - `snr_db`: Signal-to-noise ratio in decibels.
-        - `sinad_db`: Signal-to-noise-and-distortion ratio in decibels.
-        - `thdn_db`: Total harmonic distortion plus noise in decibels.
-        - `total_noise_and_dist_db`: Total noise and distortion in decibels.
-
-    ax : matplotlib axes
-        If plot is set to True, the Axes used for plotting is returned.
-
-    Powers of zero are reported as ``-inf`` dB (no warning is raised).
+        Powers of zero are reported as ``-inf`` dB (no warning is raised).
 
     Raises
     ------
     ValueError
-        If the input signal is constant (all zeros or DC only), as there is no tone to analyze.
+        If the input signal is constant (all zeros or DC only), as there is no tone to
+        analyze, or if `plot` is True and no `ax` is given.
 
-    Notes:
+    Notes
     -----
     The function fails if the fundamental is not the highest spectral component in the
     signal.
@@ -208,7 +193,7 @@ def harm_analysis(  # noqa: PLR0913
     sidelobe width of the Hann window. If this is not feasible, you can use a different
     window by using the "window" input.
 
-    References:
+    References
     ----------
     - [1] Harris, Fredric J. "On the use of windows for harmonic analysis
            with the discrete Fourier transform." Proceedings of the
@@ -217,6 +202,9 @@ def harm_analysis(  # noqa: PLR0913
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
     """  # noqa: D416
+    if plot and ax is None:
+        raise ValueError("An `ax` must be provided when `plot` is True.")
+
     if np.ptp(x) == 0:
         raise ValueError("No fundamental tone found: the input signal is constant (all zeros or DC only).")
 
@@ -240,7 +228,6 @@ def harm_analysis(  # noqa: PLR0913
 
     # Calculate THD, Signal Power and N metrics in dB
     sig_freq = fund_loc * fs / sig_len
-    harm_freq = harm_loc * fs / sig_len
     dc_db = _to_db(dc_pow)
     sig_db = _to_db(fund_pow)
     noise_db = _to_db(noise_pow)
@@ -249,30 +236,27 @@ def harm_analysis(  # noqa: PLR0913
     snr_db = sig_db - noise_db
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
-    if harm_bins.size > 0:
-        thd_db = _to_db(np.sum(harm_pow) / fund_pow)
-        harm_freq = harm_loc * fs / sig_len
-    else:
-        thd_db = np.nan
-        harm_freq = None
+    harm_freq = np.asarray(harm_loc, dtype=np.float64) * fs / sig_len
+    thd_db = _to_db(np.sum(harm_pow) / fund_pow) if harm_bins.size > 0 else np.nan
 
-    results = {
-        "fund_db": sig_db,
-        "fund_freq": sig_freq,
-        "harm_freq": harm_freq,
-        "harm_db": harm_db,
-        "dc_db": dc_db,
-        "noise_db": noise_db,
-        "thd_db": thd_db,
-        "snr_db": snr_db,
-        "sinad_db": -thdn_db,
-        "thdn_db": thdn_db,
-        "total_noise_and_dist_db": int_noise[-1],
-    }
+    results = HarmResult(
+        fund_db=float(sig_db),
+        fund_freq=float(sig_freq),
+        harm_db=np.asarray(harm_db, dtype=np.float64),
+        harm_freq=harm_freq,
+        dc_db=float(dc_db),
+        noise_db=float(noise_db),
+        thd_db=float(thd_db),
+        snr_db=float(snr_db),
+        sinad_db=float(-thdn_db),
+        thdn_db=float(thdn_db),
+        total_noise_and_dist_db=float(int_noise[-1]),
+    )
 
-    if plot is False:
+    if not plot:
         return results
-    ax = _plot_harm(
+
+    _plot_harm(
         x=x_fft_pow,
         fund_freq=sig_freq,
         freq_array=f_array,
@@ -289,4 +273,4 @@ def harm_analysis(  # noqa: PLR0913
         bw_bins=bw_bins,
     )
 
-    return results, ax
+    return results

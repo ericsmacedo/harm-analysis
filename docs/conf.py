@@ -47,6 +47,7 @@ myst_heading_anchors = 3
 
 autodoc_member_order = "bysource"
 autodoc_typehints = "description"
+autodoc_typehints_description_target = "documented"
 napoleon_numpy_docstring = True
 napoleon_google_docstring = False
 

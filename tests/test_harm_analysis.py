@@ -23,12 +23,13 @@
 """Tests the harmonic analysis function."""
 
 import logging
+from dataclasses import FrozenInstanceError, fields
 
 import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark, raises
 
-from harm_analysis import harm_analysis
+from harm_analysis import HarmResult, harm_analysis
 
 rng = np.random.default_rng(1234567890)
 
@@ -68,12 +69,12 @@ def test_harm_analysis(plot_en):
 
     if plot_en:
         fig, ax = plt.subplots()
-        results, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+        results = harm_analysis(x, fs=fs, plot=True, ax=ax)
     else:
         results = harm_analysis(x, fs=fs)
 
     print("Function results:")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         print(f"{key.ljust(10)} [dB]: {value}")
 
     logging.info(
@@ -91,12 +92,12 @@ def test_harm_analysis(plot_en):
 
     tolerance = 0.3
 
-    assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
-    assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
-    assert np.isclose(results["thd_db"], thd_db, rtol=tolerance)
-    assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
+    assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
+    assert np.isclose(results.fund_freq, f1, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
+    assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
+    assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
 
 
 @mark.parametrize("plot_en", [True, False])
@@ -135,12 +136,12 @@ def test_harm_analysis_dc(plot_en):
 
     if plot_en:
         fig, ax = plt.subplots()
-        results, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+        results = harm_analysis(x, fs=fs, plot=True, ax=ax)
     else:
         results = harm_analysis(x, fs=fs)
 
     print("Function results:")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         print(f"{key.ljust(10)} [dB]: {value}")
 
     logging.info(
@@ -158,12 +159,12 @@ def test_harm_analysis_dc(plot_en):
 
     tolerance = 0.3
 
-    assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
-    assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
-    assert np.isclose(results["thd_db"], thd_db, rtol=tolerance)
-    assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
+    assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
+    assert np.isclose(results.fund_freq, f1, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
+    assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
+    assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
 
 
 def test_harm_analysis_bw():
@@ -199,7 +200,7 @@ def test_harm_analysis_bw():
     results = harm_analysis(x, bw=bw, fs=fs)
 
     print("Function results:")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         print(f"{key.ljust(10)} [dB]: {value}")
 
     logging.info(
@@ -217,12 +218,12 @@ def test_harm_analysis_bw():
 
     tolerance = 0.3
 
-    assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
-    assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db - 3, rtol=tolerance)
-    assert np.isclose(results["thd_db"], thd_db, rtol=tolerance)
-    assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
+    assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
+    assert np.isclose(results.fund_freq, f1, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.noise_db, noise_pow_db - 3, rtol=tolerance)
+    assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
+    assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
 
 
 def test_harm_analysis_harm_zero():
@@ -260,7 +261,7 @@ def test_harm_analysis_harm_zero():
     results = harm_analysis(x, bw=bw, n_harm=0, fs=fs)
 
     print("Function results:")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         print(f"{key.ljust(10)} [dB]: {value}")
 
     logging.info(
@@ -278,12 +279,12 @@ def test_harm_analysis_harm_zero():
 
     tolerance = 0.3
 
-    assert np.isclose(results["fund_db"], fund_pow_db, rtol=tolerance)
-    assert np.isclose(results["fund_freq"], f1, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db - 3, rtol=tolerance)
-    assert np.isnan(results["thd_db"])
-    assert np.isclose(results["thdn_db"], thdn_db, rtol=tolerance)
+    assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
+    assert np.isclose(results.fund_freq, f1, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.noise_db, noise_pow_db - 3, rtol=tolerance)
+    assert np.isnan(results.thd_db)
+    assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
 
 
 @mark.parametrize("x", [np.zeros(2048), np.ones(2048)], ids=["zeros", "dc_only"])
@@ -299,5 +300,53 @@ def test_harm_analysis_no_harmonics_no_warning():
     n = 2048
     x = np.cos(2 * np.pi * 101 * np.arange(n) / n)
     results = harm_analysis(x, n_harm=0)
-    assert np.isnan(results["thd_db"])
-    assert np.isfinite(results["fund_db"])
+    assert np.isnan(results.thd_db)
+    assert np.isfinite(results.fund_db)
+
+
+def _tone(n=2048):
+    return np.cos(2 * np.pi * 101.3 * np.arange(n) / n) + rng.normal(0, 1e-4, n)
+
+
+def test_harm_analysis_returns_harm_result():
+    """harm_analysis returns a HarmResult whether or not it plots."""
+    results = harm_analysis(_tone())
+    assert isinstance(results, HarmResult)
+
+    fig, ax = plt.subplots()
+    plotted = harm_analysis(_tone(), plot=True, ax=ax)
+    assert isinstance(plotted, HarmResult)
+    # The caller's axes now hold the plot and can still be customized.
+    assert ax.lines
+    ax.set_title("custom")
+    assert ax.get_title() == "custom"
+    plt.close(fig)
+
+
+def test_harm_result_fields_and_to_dict():
+    """Fields are typed and to_dict exposes all of them."""
+    results = harm_analysis(_tone())
+    data = results.to_dict()
+
+    assert list(data) == [f.name for f in fields(HarmResult)]
+    assert isinstance(results.snr_db, float)
+    assert isinstance(results.harm_freq, np.ndarray)
+    assert results.harm_freq.size == results.harm_db.size
+
+    with raises(FrozenInstanceError):
+        results.snr_db = 0.0  # ty: ignore[invalid-assignment]
+
+
+def test_harm_analysis_no_harmonics_gives_empty_arrays():
+    """With n_harm=0, harm_freq and harm_db are empty arrays (not None)."""
+    results = harm_analysis(_tone(), n_harm=0)
+
+    assert isinstance(results.harm_freq, np.ndarray)
+    assert results.harm_freq.size == 0
+    assert results.harm_db.size == 0
+
+
+def test_harm_analysis_plot_requires_ax():
+    """plot=True without an ax raises a clear error."""
+    with raises(ValueError, match="`ax` must be provided"):
+        harm_analysis(_tone(), plot=True)

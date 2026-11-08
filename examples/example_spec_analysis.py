@@ -24,12 +24,12 @@ x = (
     + 0.01 * np.cos(2 * np.pi * F1 * 0.43 * t)
 )
 
-# Use the harm_analysis function
+# Use the spec_analysis function
 fig, ax = plt.subplots()
-results, ax = spec_analysis(x, fs=fs, plot=True, ax=ax)
+results = spec_analysis(x, fs=fs, plot=True, ax=ax)
 
 print("Function results:")
-for key, value in results.items():
+for key, value in results.to_dict().items():
     print(f"{key}: {value}")
 
 # Show plot
