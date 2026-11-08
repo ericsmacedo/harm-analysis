@@ -160,6 +160,25 @@ def spec_analysis(  # noqa: PLR0913
         If `plot` is True and no `ax` is given, or if an input is invalid: `x` not
         1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive, or
         `window` not the same length as `x`.
+
+    Examples
+    --------
+    A signal with a DC offset of 0.5 and two tones, sampled at 1 kHz:
+
+    >>> import numpy as np
+    >>> from harm_analysis import spec_analysis
+    >>> fs = 1000
+    >>> t = np.arange(4096) / fs
+    >>> rng = np.random.default_rng(0)
+    >>> x = 0.5 + np.cos(2 * np.pi * 100.3 * t) + 0.1 * np.cos(2 * np.pi * 250.7 * t)
+    >>> x = x + rng.normal(0, 1e-4, t.size)
+    >>> results = spec_analysis(x, fs=fs)
+    >>> round(results.dc, 3)
+    0.5
+    >>> results.tones_freq.round(1).tolist()
+    [100.3, 250.7]
+    >>> results.tones_db.round(1).tolist()
+    [-3.0, -23.0]
     """  # noqa: D416
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")
