@@ -22,12 +22,14 @@
 
 """Tests the CLI for the harmonic analysis function."""
 
+import json
+
 import matplotlib.pyplot as plt
 import numpy as np
 from click.testing import CliRunner
 from pytest import mark
 
-from harm_analysis.cli import _parse_sfactor, harm_analysis_cmd, spec_analysis_cmd
+from harm_analysis.cli import _json_value, _parse_sfactor, harm_analysis_cmd, spec_analysis_cmd
 
 
 @mark.parametrize("cli_name", ["harm", "spec"])
@@ -183,3 +185,57 @@ def test_spec_cli_without_tones(tmp_path):
     assert "Parameters" in result.output
     assert "noise_db" in result.output
     assert "No tones detected" in result.output
+
+
+def _write_tone(tmp_path):
+    n = 2**14
+    rng = np.random.default_rng(1)
+    x = 0.1 + np.cos(2 * np.pi * 0.1013 * np.arange(n)) + 0.01 * np.cos(2 * np.pi * 0.2026 * np.arange(n))
+    path = tmp_path / "data.txt"
+    np.savetxt(path, x + rng.normal(0, 1e-3, n), delimiter="\n")
+    return str(path)
+
+
+@mark.parametrize(
+    ("cmd", "keys"),
+    [
+        (harm_analysis_cmd, ["fund_db", "fund_freq", "harm_freq", "harm_db", "snr_db", "thd_db"]),
+        (spec_analysis_cmd, ["dc", "dc_db", "noise_db", "tones_db", "tones_freq"]),
+    ],
+)
+def test_cli_json(tmp_path, cmd, keys):
+    """--json prints only a valid JSON object with all result fields."""
+    result = CliRunner().invoke(cmd, [_write_tone(tmp_path), "--fs", "1000", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)  # fails if anything else is printed
+    assert set(keys) <= set(data)
+    assert isinstance(data[keys[0]], float)
+    assert isinstance(data[keys[3]], list)
+
+
+@mark.parametrize("cmd", [harm_analysis_cmd, spec_analysis_cmd])
+def test_cli_json_with_plot(monkeypatch, tmp_path, cmd):
+    """--json can be combined with --plot."""
+    called = {}
+    monkeypatch.setattr(plt, "show", lambda: called.setdefault("show", True))
+
+    result = CliRunner().invoke(cmd, [_write_tone(tmp_path), "--fs", "1000", "--json", "--plot"])
+
+    assert result.exit_code == 0
+    json.loads(result.output)
+    assert called
+
+
+@mark.parametrize(
+    ("value", "expected"),
+    [
+        (np.float64(1.5), 1.5),
+        (np.nan, None),
+        (-np.inf, None),
+        (np.array([1.0, np.nan, -np.inf]), [1.0, None, None]),
+    ],
+)
+def test_json_value(value, expected):
+    """Non-finite values become null so the output is strict JSON."""
+    assert _json_value(value) == expected

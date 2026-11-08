@@ -40,6 +40,19 @@ fig.savefig("spectrum.png")
 ```
 
 
+## Command line
+
+The `harm-analysis` and `spec-analysis` commands run the same analyses on a text
+file of samples (see [Command Line Interface](cli.md)). Add `--json` to get
+machine-readable output, e.g. for scripts or AI tools:
+
+```bash
+harm-analysis data.txt --fs 1e6 --json
+```
+
+Values that are not finite (`NaN`, or `-inf` dB for a power of zero) are written
+as `null`.
+
 ## `harm_analysis` example usage
 
 This example generates a tone with noise, harmonics and a DC value.
