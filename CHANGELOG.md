@@ -36,6 +36,9 @@ This release contains breaking changes and will be released as 2.0.0.
 - `py.typed` marker, so type checkers use the package's type hints.
 - `--json` option for `harm-analysis` and `spec-analysis` to print the results as
   JSON (non-finite values as `null`).
+- MCP server for AI assistants (`harm-analysis-mcp`, optional extra
+  `harm-analysis[mcp]`) with `run_harm_analysis` and `run_spec_analysis` tools, and a
+  skill file (`skills/harm-analysis/SKILL.md`) describing how to use the package.
 
 ### Fixed
 

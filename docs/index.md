@@ -8,6 +8,7 @@
 :caption: Home
 
 usage
+ai
 contributing
 changelog
 ```
