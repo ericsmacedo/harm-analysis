@@ -22,9 +22,12 @@
 """Harmonic Analysis."""
 
 from ._harmonic import harm_analysis
+from ._results import HarmResult, SpecResult
 from ._spectral import spec_analysis
 
 __all__ = [
+    "HarmResult",
+    "SpecResult",
     "harm_analysis",
     "spec_analysis",
 ]

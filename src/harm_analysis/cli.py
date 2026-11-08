@@ -113,15 +113,15 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
 
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-        results, ax[1] = harm_analysis(file_data, fs=fs, plot=True, ax=ax[1])
+        results = harm_analysis(file_data, fs=fs, plot=True, ax=ax[1])
     else:
-        results = harm_analysis(file_data, fs=fs, plot=False)
+        results = harm_analysis(file_data, fs=fs)
 
     print("Function results:")
     table = Table(box=box.MARKDOWN, title="Parameters")
     table.add_column("Parameter", justify="right")
     table.add_column("value", style="magenta")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         table.add_row(key, str(value))
 
     console.print(table)
@@ -154,18 +154,18 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
 
     if plot is True:
         fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-        results, ax[1] = spec_analysis(file_data, fs=fs, plot=True, ax=ax[1])
+        results = spec_analysis(file_data, fs=fs, plot=True, ax=ax[1])
     else:
         results = spec_analysis(file_data, fs=fs)
 
-    tones_db = results["tones_db"]
-    tones_freq = results["tones_freq"]
+    tones_db = results.tones_db
+    tones_freq = results.tones_freq
 
     table = Table(box=box.MARKDOWN, title="Parameters")
     table.add_column("Parameter", justify="right")
     table.add_column("value", style="magenta")
 
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         if key in {"tones_db", "tones_freq"}:
             continue
         table.add_row(key, str(value))

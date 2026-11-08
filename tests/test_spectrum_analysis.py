@@ -23,12 +23,13 @@
 
 import logging
 import warnings
+from dataclasses import fields
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pytest import mark
+from pytest import mark, raises
 
-from harm_analysis import spec_analysis
+from harm_analysis import SpecResult, spec_analysis
 from harm_analysis._spectrum import _to_db
 
 rng = np.random.default_rng(1234567890)
@@ -66,7 +67,7 @@ def test_spec_analysis():
     results = spec_analysis(x, fs=fs)
 
     print("Function results:")
-    for key, value in results.items():
+    for key, value in results.to_dict().items():
         print(f"{key.ljust(10)} [dB]: {value}")
 
     logging.info(
@@ -87,11 +88,11 @@ def test_spec_analysis():
     pow_fs2 = np.mean(sig_fs2**2)
     amp_arr_db = np.append(amp_arr_db, 10 * np.log10(pow_fs2))
 
-    assert np.isclose(results["dc"], dc_level, rtol=tolerance)
-    assert np.isclose(results["dc_db"], dc_power_db, rtol=tolerance)
-    assert np.isclose(results["noise_db"], noise_pow_db, rtol=tolerance)
-    assert np.allclose(results["tones_freq"], np.asarray([f1, 2 * f1, 3 * f1, fs / 2]), rtol=tolerance)
-    assert np.allclose(results["tones_db"], amp_arr_db, rtol=tolerance)
+    assert np.isclose(results.dc, dc_level, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
+    assert np.allclose(results.tones_freq, np.asarray([f1, 2 * f1, 3 * f1, fs / 2]), rtol=tolerance)
+    assert np.allclose(results.tones_db, amp_arr_db, rtol=tolerance)
 
 
 @mark.parametrize("plot_en", [True, False])
@@ -132,9 +133,9 @@ def test_spec_analysis_zero_signal():
     """An all-zero signal reports -inf dB instead of raising warnings."""
     results = spec_analysis(np.zeros(2048))
 
-    assert results["dc_db"] == -np.inf
-    assert results["noise_db"] == -np.inf
-    assert results["tones_db"].size == 0
+    assert results.dc_db == -np.inf
+    assert results.noise_db == -np.inf
+    assert results.tones_db.size == 0
 
 
 def test_to_db_zero():
@@ -144,3 +145,26 @@ def test_to_db_zero():
         assert _to_db(0.0) == -np.inf
         assert _to_db(1.0) == 0.0
         assert _to_db(np.array([0.0, 10.0])).tolist() == [-np.inf, 10.0]
+
+
+def test_spec_analysis_returns_spec_result():
+    """spec_analysis returns a SpecResult whether or not it plots."""
+    n = 2048
+    x = 0.1 + np.cos(2 * np.pi * 101.3 * np.arange(n) / n) + rng.normal(0, 1e-4, n)
+
+    results = spec_analysis(x)
+    assert isinstance(results, SpecResult)
+    assert list(results.to_dict()) == [f.name for f in fields(SpecResult)]
+    assert isinstance(results.dc_db, float)
+    assert isinstance(results.tones_freq, np.ndarray)
+
+    fig, ax = plt.subplots()
+    assert isinstance(spec_analysis(x, plot=True, ax=ax), SpecResult)
+    assert ax.lines
+    plt.close(fig)
+
+
+def test_spec_analysis_plot_requires_ax():
+    """plot=True without an ax raises a clear error."""
+    with raises(ValueError, match="`ax` must be provided"):
+        spec_analysis(np.zeros(2048) + 1, plot=True)

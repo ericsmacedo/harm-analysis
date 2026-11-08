@@ -25,10 +25,10 @@ x = (
 
 # Use the harm_analysis function
 fig, ax = plt.subplots()
-parameters, ax = harm_analysis(x, fs=fs, plot=True, ax=ax)
+results = harm_analysis(x, fs=fs, plot=True, ax=ax)
 
 print("Parameters:")
-for key, value in parameters.items():
+for key, value in results.to_dict().items():
     print(f"{key}: {value}")
 
 # Show plot

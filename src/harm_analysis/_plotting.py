@@ -95,7 +95,7 @@ def _plot_harm(  # noqa: PLR0913
     fund_freq: float,
     fund_bins: NDArray[np.integer],
     harm_bins: NDArray[np.integer],
-    harm_freq: NDArray[np.float64] | None,
+    harm_freq: NDArray[np.float64],
     harm_pow_db: NDArray[np.float64],
 ):
     x_db = _to_db(x)
@@ -110,7 +110,7 @@ def _plot_harm(  # noqa: PLR0913
         y_marker = fund_pow_db
         _annotate(ax, x_marker, y_marker, "F")
 
-    if harm_bins.size > 0 and harm_freq is not None:
+    if harm_bins.size > 0:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics")
 
