@@ -27,6 +27,9 @@ The package provides two main functions:
 
 See [usage](./docs/usage.md) for examples.
 
+AI assistants (Claude, GitHub Copilot, ...) can run the analyses through the included
+MCP server; see [AI assistants](./docs/ai.md).
+
 
 ## Installation
 
