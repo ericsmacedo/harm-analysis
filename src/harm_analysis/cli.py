@@ -100,6 +100,43 @@ opt_sfactor = click.option(
 )
 
 
+def _load_data(filename, sep, sfactor):
+    """Read time-domain samples from a text file and apply the scaling factor."""
+    return np.fromfile(filename, sep=sep) * sfactor
+
+
+def _plot_axes():
+    """Create the figure: time-domain data on the left, power spectrum on the right."""
+    _, (data_ax, spec_ax) = plt.subplots(1, 2, figsize=(15, 5))
+    return data_ax, spec_ax
+
+
+def _show_plot(data_ax, spec_ax, data):
+    """Plot the time-domain data, format the spectrum axes and show the figure."""
+    spec_ax.grid(True, which="both")
+    spec_ax.set_title("Power spectrum")
+    spec_ax.set_xscale("log")
+    spec_ax.xaxis.set_major_formatter(EngFormatter(unit="Hz"))
+
+    data_ax.set_title("Data")
+    data_ax.plot(data)
+    data_ax.grid(True, which="both", linestyle="-")
+    data_ax.set_xlabel("[n]")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def _params_table(params):
+    """Build the table of result parameters from ``(name, value)`` pairs."""
+    table = Table(box=box.MARKDOWN, title="Parameters")
+    table.add_column("Parameter", justify="right")
+    table.add_column("value", style="magenta")
+    for key, value in params:
+        table.add_row(key, str(value))
+    return table
+
+
 @click.command(name="harm-analysis")
 @arg_filepath
 @opt_fs
@@ -108,37 +145,19 @@ opt_sfactor = click.option(
 @opt_sfactor
 def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
     """Runs the harm_analysis function for a file containing time domain data."""
-    # scaling factor
-    file_data = np.fromfile(filename, sep=sep) * sfactor
+    data = _load_data(filename, sep, sfactor)
 
-    if plot is True:
-        fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-        results = harm_analysis(file_data, fs=fs, plot=True, ax=ax[1])
+    if plot:
+        data_ax, spec_ax = _plot_axes()
+        results = harm_analysis(data, fs=fs, plot=True, ax=spec_ax)
     else:
-        results = harm_analysis(file_data, fs=fs)
+        results = harm_analysis(data, fs=fs)
 
     print("Function results:")
-    table = Table(box=box.MARKDOWN, title="Parameters")
-    table.add_column("Parameter", justify="right")
-    table.add_column("value", style="magenta")
-    for key, value in results.to_dict().items():
-        table.add_row(key, str(value))
+    console.print(_params_table(results.to_dict().items()))
 
-    console.print(table)
-
-    if plot is True:
-        ax[1].grid(True, which="both")
-        ax[1].set_title("Power spectrum")
-        ax[1].set_xscale("log")
-        ax[1].xaxis.set_major_formatter(EngFormatter(unit="Hz"))
-
-        ax[0].set_title("Data")
-        ax[0].plot(file_data)
-        ax[0].grid(True, which="both", linestyle="-")
-        ax[0].set_xlabel("[n]")
-
-        plt.tight_layout()
-        plt.show()
+    if plot:
+        _show_plot(data_ax, spec_ax, data)
 
 
 @click.command(name="spec-analysis")
@@ -149,30 +168,18 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
 @opt_sfactor
 def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
     """Runs the spec_analysis function for a file containing time domain data."""
-    # scaling factor
-    file_data = np.fromfile(filename, sep=sep) * sfactor
+    data = _load_data(filename, sep, sfactor)
 
-    if plot is True:
-        fig, ax = plt.subplots(1, 2, figsize=(15, 5))
-        results = spec_analysis(file_data, fs=fs, plot=True, ax=ax[1])
+    if plot:
+        data_ax, spec_ax = _plot_axes()
+        results = spec_analysis(data, fs=fs, plot=True, ax=spec_ax)
     else:
-        results = spec_analysis(file_data, fs=fs)
+        results = spec_analysis(data, fs=fs)
 
-    tones_db = results.tones_db
-    tones_freq = results.tones_freq
+    params = ((key, value) for key, value in results.to_dict().items() if key not in {"tones_db", "tones_freq"})
+    console.print(_params_table(params))
 
-    table = Table(box=box.MARKDOWN, title="Parameters")
-    table.add_column("Parameter", justify="right")
-    table.add_column("value", style="magenta")
-
-    for key, value in results.to_dict().items():
-        if key in {"tones_db", "tones_freq"}:
-            continue
-        table.add_row(key, str(value))
-
-    console.print(table)
-
-    if tones_db.size == 0:
+    if results.tones_db.size == 0:
         console.print("No tones detected")
     else:
         tones_table = Table(box=box.MARKDOWN, title="Tones")
@@ -180,21 +187,10 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
         tones_table.add_column("Amplitude [dB]")
         tones_table.add_column("Frequency [Hz]")
 
-        for i, amp in enumerate(tones_db):
-            tones_table.add_row(f"T{i}", str(amp), str(tones_freq[i]))
+        for i, (amp, freq) in enumerate(zip(results.tones_db, results.tones_freq, strict=True)):
+            tones_table.add_row(f"T{i}", str(amp), str(freq))
 
         console.print(tones_table)
 
-    if plot is True:
-        ax[1].grid(True, which="both")
-        ax[1].set_title("Power spectrum")
-        ax[1].set_xscale("log")
-        ax[1].xaxis.set_major_formatter(EngFormatter(unit="Hz"))
-
-        ax[0].set_title("Data")
-        ax[0].plot(file_data)
-        ax[0].grid(True, which="both", linestyle="-")
-        ax[0].set_xlabel("[n]")
-
-        plt.tight_layout()
-        plt.show()
+    if plot:
+        _show_plot(data_ax, spec_ax, data)
