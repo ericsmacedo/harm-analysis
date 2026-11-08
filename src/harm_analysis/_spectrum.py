@@ -292,7 +292,7 @@ def _mask_array(x, idx_list):
     --------
     >>> x = np.array([1, 2, 3, 4, 5])
     >>> idx_list = [0, 2, 4]
-    >>> mask_array(x, idx_list)
+    >>> _mask_array(x, idx_list)
     masked_array(data=[1, --, 3, --, 5],
                  mask=[False,  True, False,  True, False],
            fill_value=999999)

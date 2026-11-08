@@ -212,6 +212,40 @@ def harm_analysis(  # noqa: PLR0913
     - [2] Cerna, Michael, and Audrey F. Harvey. The fundamentals of
            FFT-based signal analysis and measurement. Application Note
            041, National Instruments, 2000.
+
+    Examples
+    --------
+    A 100.3 Hz tone with a 2nd harmonic 40 dB below it, sampled at 1 kHz:
+
+    >>> import numpy as np
+    >>> from harm_analysis import harm_analysis
+    >>> fs = 1000
+    >>> t = np.arange(4096) / fs
+    >>> rng = np.random.default_rng(0)
+    >>> x = np.cos(2 * np.pi * 100.3 * t) + 0.01 * np.cos(2 * np.pi * 200.6 * t)
+    >>> x = x + rng.normal(0, 1e-4, t.size)
+    >>> results = harm_analysis(x, fs=fs)
+    >>> round(results.fund_freq, 1)
+    100.3
+    >>> round(results.fund_db, 2)
+    -3.01
+    >>> round(results.thd_db, 1)
+    -40.0
+    >>> round(float(results.harm_freq[0]), 1)
+    200.6
+
+    All metrics as a dictionary:
+
+    >>> list(results.to_dict())[:4]
+    ['fund_db', 'fund_freq', 'harm_freq', 'harm_db']
+
+    Plot the spectrum on your own axes, then keep customizing them:
+
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> results = harm_analysis(x, fs=fs, plot=True, ax=ax)
+    >>> ax.set_xscale("log")
+    >>> plt.close(fig)
     """  # noqa: D416
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")
