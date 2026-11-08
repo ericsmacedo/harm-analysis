@@ -34,6 +34,9 @@ This release contains breaking changes and will be released as 2.0.0.
 - `--sfactor` accepts arithmetic expressions: numbers (including `1e5`),
   `+ - * /`, parentheses and `log2`. ([#22](https://github.com/ericsmacedo/harm-analysis/pull/22))
 - `py.typed` marker, so type checkers use the package's type hints.
+- MCP server for AI assistants (`harm-analysis-mcp`, optional extra
+  `harm-analysis[mcp]`) with `run_harm_analysis` and `run_spec_analysis` tools, and a
+  skill file (`skills/harm-analysis/SKILL.md`) describing how to use the package.
 
 ### Fixed
 
