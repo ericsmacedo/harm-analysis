@@ -9,6 +9,7 @@
 
 usage
 contributing
+changelog
 ```
 
 ```{toctree}
