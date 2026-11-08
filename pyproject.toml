@@ -185,7 +185,7 @@ addopts ="""
 filterwarnings = [
     "error",
 ]
-testpaths = ["tests"]       # Directories to search for tests
+testpaths = ["tests", "src"]  # Directories to search for tests (src: docstring examples)
 
 [tool.coverage.run]
 omit = [
