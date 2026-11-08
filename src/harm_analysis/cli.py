@@ -22,6 +22,7 @@
 """CLI for harm_analysis."""
 
 import ast
+import json
 import math
 import operator
 
@@ -89,6 +90,15 @@ arg_filepath = click.argument("filename", type=click.Path(exists=True, readable=
 opt_fs = click.option("--fs", default=1.0, help="Sampling frequency.")
 opt_sep = click.option("--sep", default=" ", help="Separator between items.")
 opt_plot = click.option("--plot", is_flag=True, help="Plot the power spectrum of the data")
+opt_json = click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help=(
+        "Print the results as JSON instead of tables. Values that are not finite "
+        "(NaN, or -inf dB for a power of zero) are written as null."
+    ),
+)
 opt_sfactor = click.option(
     "--sfactor",
     default="1",
@@ -127,6 +137,20 @@ def _show_plot(data_ax, spec_ax, data):
     plt.show()
 
 
+def _json_value(value):
+    """Convert a result value to a JSON-compatible value (non-finite numbers become None)."""
+    if isinstance(value, np.ndarray):
+        return [_json_value(v) for v in value.tolist()]
+    value = float(value)
+    return value if math.isfinite(value) else None
+
+
+def _print_json(results):
+    """Print the results as a JSON object."""
+    data = {key: _json_value(value) for key, value in results.to_dict().items()}
+    click.echo(json.dumps(data, indent=2, allow_nan=False))
+
+
 def _params_table(params):
     """Build the table of result parameters from ``(name, value)`` pairs."""
     table = Table(box=box.MARKDOWN, title="Parameters")
@@ -143,7 +167,8 @@ def _params_table(params):
 @opt_sep
 @opt_plot
 @opt_sfactor
-def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
+@opt_json
+def harm_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913, PLR0917
     """Runs the harm_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
@@ -153,8 +178,11 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
     else:
         results = harm_analysis(data, fs=fs)
 
-    print("Function results:")
-    console.print(_params_table(results.to_dict().items()))
+    if as_json:
+        _print_json(results)
+    else:
+        print("Function results:")
+        console.print(_params_table(results.to_dict().items()))
 
     if plot:
         _show_plot(data_ax, spec_ax, data)
@@ -166,7 +194,8 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor):
 @opt_plot
 @opt_sep
 @opt_sfactor
-def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
+@opt_json
+def spec_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913, PLR0917
     """Runs the spec_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
@@ -175,6 +204,12 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor):
         results = spec_analysis(data, fs=fs, plot=True, ax=spec_ax)
     else:
         results = spec_analysis(data, fs=fs)
+
+    if as_json:
+        _print_json(results)
+        if plot:
+            _show_plot(data_ax, spec_ax, data)
+        return
 
     params = ((key, value) for key, value in results.to_dict().items() if key not in {"tones_db", "tones_freq"})
     console.print(_params_table(params))
