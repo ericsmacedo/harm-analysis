@@ -106,35 +106,43 @@ def spec_analysis(  # noqa: PLR0913
     plot: bool = False,
     ax: None | Axes = None,
     distance: int = 6,
-    prominence: int = 10,
-    height: int | None = None,
+    prominence: float = 10,
+    height: float | None = None,
 ) -> SpecResult:
     """Spectral Analysis.
 
-    Auto-detects DC, tones, and noise from the spectrum.
+    Auto-detects DC, tones, and noise from the spectrum. Intended for signals
+    without a known injected tone.
+
+    A tone is a peak in the power spectrum (in dB) that meets the `distance`,
+    `prominence` and `height` criteria (see :func:`scipy.signal.find_peaks`). All
+    bins that are not DC or part of a tone are counted as noise.
 
     Parameters
     ----------
     x : array_like
-        Input signal, containing a tone.
+        Input signal.
     fs : float, optional
-        Sampling frequency.
+        Sampling frequency. Frequencies in the results are in the same units.
+        Default is 1.
     window : array_like, optional
-        Window that will be multiplied with the signal. Default is
-        Hann window.
+        Window that will be multiplied with the signal, with the same length as `x`.
+        Default is a Hann window.
     plot : bool, optional
         If True, the power spectrum is plotted on `ax`. The caller keeps the
         reference to `ax` and can keep customizing it after the call (title,
         scale, limits, etc.).
-    distance: number, optional
-        Required minimal horizontal distance (>= 1) in samples between neighbouring peaks.
-        Smaller peaks are removed first until the condition is fulfilled for all remaining peaks.
-    prominence: number or ndarray, optional
-        Required prominence of peaks in dB. Either a number, None, or an array matching x
-    height: number or ndarray or sequence, optional
-        Required height of peaks in dB. Either a number, None, an array matching x.
     ax : matplotlib.axes.Axes or None, optional
         Axes to plot on. Required if `plot` is True.
+    distance : int, optional
+        Required minimal distance (>= 1), in frequency bins, between neighbouring
+        peaks. Smaller peaks are removed first until the condition is fulfilled for
+        all remaining peaks. Default is 6.
+    prominence : float, optional
+        Required prominence of peaks, in dB. Default is 10.
+    height : float, optional
+        Required height of peaks, in dB. Default is None, which uses a threshold
+        16 dB above the rolling median (over 51 bins) of the spectrum.
 
     Returns
     -------
@@ -147,7 +155,6 @@ def spec_analysis(  # noqa: PLR0913
     ------
     ValueError
         If `plot` is True and no `ax` is given.
-
     """  # noqa: D416
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")

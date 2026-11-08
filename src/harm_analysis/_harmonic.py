@@ -139,29 +139,33 @@ def harm_analysis(  # noqa: PLR0913
 ) -> HarmResult:
     """Harmonic Analysis.
 
-    Calculates SNR, THD, Fundamental power, and Noise power of the input signal x.
+    Calculates the fundamental, harmonics, DC and noise power of the input signal x,
+    and from them the THD, SNR, SINAD and THD+N.
 
-    The total harmonic distortion is determined from the fundamental frequency and the
-    first five harmonics using a power spectrum of the same length as the input signal.
-    A hann window is applied to the signal, before the power spectrum is obtained.
-
-    For simulations with an injected tone.
-
+    Intended for signals with an injected tone (e.g. simulations or measurements of
+    a circuit driven by a sine wave). The THD is computed from the fundamental and
+    the first `n_harm` harmonics, using a power spectrum of the same length as the
+    input signal. A Hann window is applied to the signal before the power spectrum
+    is obtained, unless another `window` is given.
 
     Parameters
     ----------
     x : array_like
         Input signal, containing a tone.
     fs : float, optional
-        Sampling frequency.
-    n_harm : int, optional
-         Number of harmonics used in the THD calculation.
-    window : array_like, optional
-         Window that will be multiplied with the signal. Default is Hann window.
+        Sampling frequency. Frequencies in the results are in the same units.
+        Default is 1.
     bw : float, optional
-        Bandwidth to use for the calculation of the metrics, in same units as fs.
-        Also useful to filter another tone (or noise) with amplitude greater than the
-        fundamental and located above a certain frequency (see shaped noise example).
+        Bandwidth to use for the calculation of the metrics, in the same units as
+        `fs`. Default is ``fs / 2``. Also useful to exclude another tone (or noise)
+        with amplitude greater than the fundamental and located above a certain
+        frequency (see the shaped noise example).
+    n_harm : int, optional
+        Number of harmonics used in the THD calculation. Default is 5. Harmonics
+        above `bw` are ignored.
+    window : array_like, optional
+        Window that will be multiplied with the signal, with the same length as `x`.
+        Default is a Hann window.
     plot : bool, optional
         If True, the power spectrum is plotted on `ax`. The caller keeps the
         reference to `ax` and can keep customizing it after the call (title,
@@ -186,8 +190,9 @@ def harm_analysis(  # noqa: PLR0913
 
     Notes
     -----
-    The function fails if the fundamental is not the highest spectral component in the
-    signal.
+    The fundamental is taken to be the highest spectral component between DC and
+    `bw`. If the signal contains a stronger tone, that tone is reported as the
+    fundamental; use `bw` to exclude it when it is above the fundamental.
 
     Ensure that the frequency components are far enough apart to accommodate for the
     sidelobe width of the Hann window. If this is not feasible, you can use a different
