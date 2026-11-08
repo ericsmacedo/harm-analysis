@@ -31,11 +31,8 @@ from harm_analysis.cli import _parse_sfactor, harm_analysis_cmd, spec_analysis_c
 
 
 @mark.parametrize("cli_name", ["harm", "spec"])
-def test_cli(monkeypatch, cli_name):
-    """Test for harm_analysis function.
-
-    Checks if the function can obtain results with less than 0.1 dB of error.
-    """
+def test_cli(monkeypatch, tmp_path, cli_name):
+    """Both commands run and plot for a signal with a tone and harmonics."""
     # test signal
     n = 2048
     fs = 1000
@@ -59,7 +56,8 @@ def test_cli(monkeypatch, cli_name):
     )
 
     # Save data to TXT file
-    np.savetxt("test_data_cli.txt", x, delimiter="\n")
+    data_file = str(tmp_path / "test_data_cli.txt")
+    np.savetxt(data_file, x, delimiter="\n")
 
     runner = CliRunner()
 
@@ -71,20 +69,17 @@ def test_cli(monkeypatch, cli_name):
     monkeypatch.setattr(plt, "show", fake_show)
 
     if cli_name == "harm":
-        result = runner.invoke(harm_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
+        result = runner.invoke(harm_analysis_cmd, [data_file, "--fs", str(fs), "--plot"])
     elif cli_name == "spec":
-        result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
+        result = runner.invoke(spec_analysis_cmd, [data_file, "--fs", str(fs), "--plot"])
 
     assert "was_called" in called
 
     assert result.exit_code == 0
 
 
-def test_cli_no_tones(monkeypatch):
-    """Test for harm_analysis function.
-
-    Checks if the function can obtain results with less than 0.1 dB of error.
-    """
+def test_cli_no_tones(monkeypatch, tmp_path):
+    """spec-analysis runs and plots for a signal without tones."""
     # test signal
     n = 2048
     fs = 1000
@@ -100,7 +95,8 @@ def test_cli_no_tones(monkeypatch):
     x = dc_level + noise
 
     # Save data to TXT file
-    np.savetxt("test_data_cli.txt", x, delimiter="\n")
+    data_file = str(tmp_path / "test_data_cli.txt")
+    np.savetxt(data_file, x, delimiter="\n")
 
     runner = CliRunner()
 
@@ -111,7 +107,7 @@ def test_cli_no_tones(monkeypatch):
 
     monkeypatch.setattr(plt, "show", fake_show)
 
-    result = runner.invoke(spec_analysis_cmd, ["test_data_cli.txt", "--fs", str(fs), "--plot"])
+    result = runner.invoke(spec_analysis_cmd, [data_file, "--fs", str(fs), "--plot"])
 
     assert result.exit_code == 0
     assert "was_called" in called
