@@ -39,6 +39,7 @@ The project contains these files and directories:
 | `.readthedocs.yaml` | Documentation Server Configuration |
 | `.pre-commit-config.yaml` | Pre-Commit Check Configuration |
 | `uv.lock` | File with resolved python package dependencies |
+| `CHANGELOG.md` | Notable changes per release; add an entry under *Unreleased* with each change |
 
 Next to that, there are some temporary files ignored by version control system.
 
