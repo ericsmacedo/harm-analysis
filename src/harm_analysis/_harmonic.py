@@ -36,6 +36,7 @@ from ._spectrum import (
     _power_from_bins,
     _power_spectrum,
     _to_db,
+    _validate_inputs,
 )
 
 
@@ -184,9 +185,14 @@ def harm_analysis(  # noqa: PLR0913
 
     Raises
     ------
+    TypeError
+        If `x` or `window` is complex or not numeric.
     ValueError
         If the input signal is constant (all zeros or DC only), as there is no tone to
-        analyze, or if `plot` is True and no `ax` is given.
+        analyze; if `plot` is True and no `ax` is given; or if an input is invalid:
+        `x` not 1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
+        `window` not the same length as `x`, `bw` not in ``(0, fs / 2]``, or `n_harm`
+        negative.
 
     Notes
     -----
@@ -209,6 +215,8 @@ def harm_analysis(  # noqa: PLR0913
     """  # noqa: D416
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")
+
+    x = _validate_inputs(x, fs, window=window, bw=bw, n_harm=n_harm)
 
     if np.ptp(x) == 0:
         raise ValueError("No fundamental tone found: the input signal is constant (all zeros or DC only).")
