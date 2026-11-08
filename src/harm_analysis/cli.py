@@ -168,7 +168,7 @@ def _params_table(params):
 @opt_plot
 @opt_sfactor
 @opt_json
-def harm_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913, PLR0917
+def harm_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913
     """Runs the harm_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
@@ -195,7 +195,7 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR09
 @opt_sep
 @opt_sfactor
 @opt_json
-def spec_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913, PLR0917
+def spec_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913
     """Runs the spec_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
