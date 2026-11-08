@@ -1,11 +1,13 @@
+# Command Line Interface
+
 This page provides documentation for our command line tools.
 
-::: mkdocs-click
-    :module: harm_analysis.cli
-    :command: harm_analysis_cmd
-    :prog_name: harm-analysis
+```{eval-rst}
+.. click:: harm_analysis.cli:harm_analysis_cmd
+   :prog: harm-analysis
+   :nested: full
 
-::: mkdocs-click
-    :module: harm_analysis.cli
-    :command: spec_analysis_cmd
-    :prog_name: spec-analysis
+.. click:: harm_analysis.cli:spec_analysis_cmd
+   :prog: spec-analysis
+   :nested: full
+```
