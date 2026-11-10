@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-This release contains breaking changes and will be released as 2.0.0.
+## [2.0.0] - 2026-11-10
+
+This release contains breaking changes; see *Changed (breaking)* below.
 
 ### Changed (breaking)
 
@@ -160,7 +162,8 @@ This release contains breaking changes and will be released as 2.0.0.
 
 See the [GitHub releases](https://github.com/ericsmacedo/harm-analysis/releases).
 
-[Unreleased]: https://github.com/ericsmacedo/harm-analysis/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/ericsmacedo/harm-analysis/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/ericsmacedo/harm-analysis/compare/v1.4.1...v2.0.0
 [1.4.1]: https://github.com/ericsmacedo/harm-analysis/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/ericsmacedo/harm-analysis/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ericsmacedo/harm-analysis/compare/v1.2.1...v1.3.0
