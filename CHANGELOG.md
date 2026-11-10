@@ -27,6 +27,16 @@ This release contains breaking changes and will be released as 2.0.0.
   ([#30](https://github.com/ericsmacedo/harm-analysis/pull/30))
 - `plot=True` without an `ax` raises a `ValueError`. ([#27](https://github.com/ericsmacedo/harm-analysis/pull/27))
 
+### Changed
+
+- Restyled the spectrum plots (`plot=True` and the CLI's `--plot`): the noise is a thin
+  gray background trace, the fundamental/tones and harmonics stand out in colors that
+  are distinguishable with color-vision deficiencies, peaks are labeled with their level
+  (e.g. "H2 -43.0 dB"), and the legend shows the integrated noise values (at `bw` when it
+  is given, matching `noise_db`). Only the given `ax` is styled.
+- Harmonics in the plots are numbered by their order, as in MATLAB: the 2nd harmonic is
+  "H2" (it was labeled "H1").
+
 ### Added
 
 - `fund_freq` parameter of `harm_analysis` (and `--fund-freq` for the `harm-analysis`

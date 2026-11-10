@@ -127,14 +127,15 @@ def _load_data(filename, sep, sfactor):
 def _plot_axes():
     """Create the figure: time-domain data on the left, power spectrum on the right."""
     _, (data_ax, spec_ax) = plt.subplots(1, 2, figsize=(15, 5))
+    # Log frequency axis before plotting, so the peak labels are placed for it
+    spec_ax.set_xscale("log")
     return data_ax, spec_ax
 
 
 def _show_plot(data_ax, spec_ax, data):
     """Plot the time-domain data, format the spectrum axes and show the figure."""
-    spec_ax.grid(True, which="both")
+    # The analysis functions style the spectrum axes (grid, labels, legend)
     spec_ax.set_title("Power spectrum")
-    spec_ax.set_xscale("log")
     spec_ax.xaxis.set_major_formatter(EngFormatter(unit="Hz"))
 
     data_ax.set_title("Data")
