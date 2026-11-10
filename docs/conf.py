@@ -37,12 +37,13 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_click",
     "sphinx_copybutton",
+    "matplotlib.sphinxext.plot_directive",
 ]
 
 source_suffix = {".md": "markdown"}
 exclude_patterns = ["_build"]
 
-myst_enable_extensions = ["colon_fence", "attrs_inline", "deflist"]
+myst_enable_extensions = ["colon_fence", "attrs_inline", "deflist", "dollarmath"]
 myst_heading_anchors = 3
 
 autodoc_member_order = "bysource"
@@ -60,3 +61,9 @@ intersphinx_mapping = {
 html_theme = "furo"
 html_title = "harm-analysis"
 html_static_path: list[str] = []
+
+# Figures generated from docs/figures/*.py at build time (matplotlib plot directive),
+# so they always show the current behavior of the library
+plot_formats = [("png", 144)]
+plot_html_show_formats = False
+plot_html_show_source_link = True

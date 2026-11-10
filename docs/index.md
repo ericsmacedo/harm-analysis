@@ -3,20 +3,30 @@
 :relative-images:
 ```
 
+## Contents
+
 ```{toctree}
-:hidden:
-:caption: Home
+:caption: Guide
+:maxdepth: 2
 
 usage
+how-it-works
+corner-cases
 ai
-contributing
-changelog
 ```
 
 ```{toctree}
-:hidden:
 :caption: Reference
+:maxdepth: 2
 
 api
 cli
+```
+
+```{toctree}
+:caption: Project
+:maxdepth: 1
+
+contributing
+changelog
 ```

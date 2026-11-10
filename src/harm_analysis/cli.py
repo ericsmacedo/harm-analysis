@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import EngFormatter
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table, box
 
 from . import harm_analysis, spec_analysis
@@ -230,8 +231,9 @@ def spec_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR09
     else:
         tones_table = Table(box=box.MARKDOWN, title="Tones")
         tones_table.add_column("Tone")
-        tones_table.add_column("Amplitude [dB]")
-        tones_table.add_column("Frequency [Hz]")
+        # escape(): rich would otherwise read "[dB]" as a style tag and drop it
+        tones_table.add_column(escape("Power [dB]"))
+        tones_table.add_column(escape("Frequency [Hz]"))
 
         for i, (amp, freq) in enumerate(zip(results.tones_db, results.tones_freq, strict=True)):
             tones_table.add_row(f"T{i}", str(amp), str(freq))

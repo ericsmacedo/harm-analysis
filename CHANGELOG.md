@@ -39,6 +39,10 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Added
 
+- Documentation: "How it works" (the algorithm and the definition of every metric),
+  "Corner cases" (interferers, shaped noise, noise-free tones, fs/2, false tones,
+  invalid input) with figures generated from the code at build time, CLI examples with
+  real output, an API overview and a table of contents on the home page.
 - `fund_freq` parameter of `harm_analysis` (and `--fund-freq` for the `harm-analysis`
   command, `fund_freq` for the MCP tool): the expected frequency of the injected
   tone, so a stronger interferer is no longer taken as the fundamental. It raises a
@@ -64,6 +68,8 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- The `spec-analysis` tones table header showed "Amplitude" instead of "Amplitude [dB]"
+  (rich read "[dB]" as a style tag); it is now "Power [dB]", which is what the column holds.
 - `harm_analysis` and `spec_analysis` crashed with a `TypeError` on a noise-free tone
   that is not on an FFT bin, for signals of up to 256 samples: the tone's peak grew
   over the whole spectrum (DC included) and left no noise bins. Peaks no longer extend
