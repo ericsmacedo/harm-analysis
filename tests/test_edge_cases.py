@@ -27,7 +27,7 @@ import numpy as np
 import pytest
 from scipy import signal
 
-from harm_analysis import harm_analysis
+from harm_analysis import harm_analysis, spec_analysis
 
 N = 4096
 T = np.arange(N)
@@ -188,3 +188,18 @@ def test_fund_freq_inside_dc():
     x = 0.5 + _signal(0.0513)
     with pytest.raises(ValueError, match=r"`fund_freq` .* is inside the DC component"):
         harm_analysis(x, fund_freq=1 / N)
+
+
+@pytest.mark.parametrize("func", [harm_analysis, spec_analysis])
+@pytest.mark.parametrize("window_name", ["hann", "blackmanharris", "flattop"])
+@pytest.mark.parametrize("n", [4096, 4095, 1000, 1001], ids=lambda n: f"n{n}_{'even' if n % 2 == 0 else 'odd'}")
+def test_dc_power(func, window_name, n):
+    """DC power is correct for any window and for even and odd lengths (#48)."""
+    dc = 0.25
+    t = np.arange(n)
+    x = dc + np.cos(2 * np.pi * 0.1003 * t) + np.random.default_rng(0).normal(0, 1e-6, n)
+    window = signal.windows.get_window(window_name, n, fftbins=True)
+
+    results = func(x, window=window)
+
+    assert np.isclose(results.dc_db, 20 * np.log10(dc), atol=0.01)
