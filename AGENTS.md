@@ -30,6 +30,8 @@ real signal:
 | `tests/` | pytest tests |
 | `examples/` | Example scripts and their captured output (`*.md`), included in the docs |
 | `docs/` | Sphinx docs written in Markdown (MyST); `docs/conf.py` |
+| `docs/figures/` | Scripts for the documentation figures, run at build time by matplotlib's `plot` directive |
+| `docs/cli_examples/` | Example data and CLI outputs shown in `docs/cli.md`; regenerate with `uv run python docs/cli_examples/generate.py` (a test checks they are current) |
 | `CHANGELOG.md` | Keep a Changelog format |
 
 ## Commands

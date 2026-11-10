@@ -49,6 +49,10 @@ SECTIONS = {
     "Docs": {
         "index": "Overview and installation",
         "usage": "How to use harm_analysis and spec_analysis, with examples and their output",
+        "how-it-works": "The algorithm step by step and the exact definition of every metric",
+        "corner-cases": "Situations that need care (interferers, shaped noise, noise-free tones, fs/2, false tones) "
+        "and the errors raised for invalid input",
+        "ai": "Using the package from AI assistants through its MCP server and skill file",
     },
     "API": {
         "api": "Reference for harm_analysis, spec_analysis, HarmResult and SpecResult",

@@ -1,5 +1,18 @@
-# Usage
+# Quickstart
 
+```python
+import numpy as np
+from harm_analysis import harm_analysis
+
+fs = 1000
+t = np.arange(4096) / fs
+x = np.cos(2 * np.pi * 100.3 * t) + 0.01 * np.cos(2 * np.pi * 200.6 * t)  # tone + 2nd harmonic
+x += np.random.default_rng(0).normal(0, 1e-4, t.size)  # noise
+
+results = harm_analysis(x, fs=fs)
+print(f"{results.fund_freq:.2f} Hz, SNR {results.snr_db:.1f} dB, THD {results.thd_db:.1f} dB")
+# 100.30 Hz, SNR 75.8 dB, THD -40.0 dB
+```
 
 There are two main functions:
 
@@ -15,8 +28,8 @@ of them as a dictionary:
 ```python
 results = harm_analysis(x, fs=fs)
 
-results.snr_db     # signal-to-noise ratio in dB
-results.thd_db     # total harmonic distortion in dB
+results.snr_db  # signal-to-noise ratio in dB
+results.thd_db  # total harmonic distortion in dB
 results.harm_freq  # frequencies of the harmonics (empty array if none)
 
 for name, value in results.to_dict().items():
