@@ -131,12 +131,14 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array, fund_freq=None, fund_b
         max_loc = _peak_near(x, fund_freq, fund_bin, dc_end, bw_bins, freq_array)
 
     # list containing bins of fundamental
-    fund_pow, fund_loc, fund_bins = _find_freq_bins(x, max_loc, bw_bins=bw_bins, enbw_bins=enbw_bins)
+    fund_pow, fund_loc, fund_bins = _find_freq_bins(x, max_loc, bw_bins=bw_bins, enbw_bins=enbw_bins, min_bin=dc_end)
 
     # THD+N bins (all bins excluding DC and the fundamental)
     thdn_bins = np.setdiff1d(np.arange(len(x)), np.concatenate((fund_bins, dc_bins)))
 
-    harm_pow, harm_loc, harm_bins = _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins=enbw_bins)
+    harm_pow, harm_loc, harm_bins = _find_harm(
+        x, fund_loc, n_harm, bw_bins, enbw_bins=enbw_bins, min_bin=dc_end, fund_bins=fund_bins
+    )
 
     # Remaining bins are considered noise.
     if harm_bins.size > 0:
@@ -160,11 +162,15 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array, fund_freq=None, fund_b
     )
 
 
-def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
+def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins, min_bin=0, fund_bins=None):  # noqa: PLR0913
     """Find the power, location and bins of the harmonics inside the analysis band.
 
     Returns empty arrays if `n_harm` is 0 or if all harmonics are above `bw_bins`
     (the `bw` limit or fs/2).
+
+    Bins that belong to the fundamental (`fund_bins`) are never counted as harmonic: without
+    a noise floor, the fundamental's leakage can reach the harmonic frequencies, and that
+    power must not be counted twice. A harmonic left with no bins has zero power.
     """
     # Expected bin of each harmonic; harmonics above the band are ignored
     harm_locs = fund_loc * np.arange(2, n_harm + 2)
@@ -173,12 +179,16 @@ def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
     if harm_locs.size == 0:  # n_harm == 0, or all harmonics outside the band
         return np.array([]), np.array([]), np.array([], dtype=int)
 
-    peaks = [_find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins) for loc in harm_locs]
-    harm_pow = np.array([power for power, _, _ in peaks])
-    harm_loc = np.array([loc for _, loc, _ in peaks])
-    harm_bins = np.concatenate([bins for _, _, bins in peaks])
+    exclude = np.array([], dtype=int) if fund_bins is None else fund_bins
+    harm_pow, harm_loc, harm_bins = [], [], []
+    for expected in harm_locs:
+        _, loc, bins = _find_freq_bins(x, int(expected), bw_bins=bw_bins, enbw_bins=enbw_bins, min_bin=min_bin)
+        bins = np.setdiff1d(bins, exclude)
+        harm_pow.append(_power_from_bins(x, bins, enbw_bins=enbw_bins, bw_bins=bw_bins))
+        harm_loc.append(loc if bins.size else expected)
+        harm_bins.append(bins)
 
-    return harm_pow, harm_loc, harm_bins
+    return np.array(harm_pow), np.array(harm_loc), np.concatenate(harm_bins).astype(int)
 
 
 def _last_value(curve) -> float:
@@ -374,7 +384,7 @@ def harm_analysis(  # noqa: PLR0913
 
     # THD in dB is equal to 10*log10(sum(harmonics power)/fundamental power)
     harm_freq = np.asarray(harm_loc, dtype=np.float64) * fs / sig_len
-    thd_db = _to_db(np.sum(harm_pow) / fund_pow) if harm_bins.size > 0 else np.nan
+    thd_db = _to_db(np.sum(harm_pow) / fund_pow) if harm_pow.size > 0 else np.nan
 
     results = HarmResult(
         fund_db=float(sig_db),

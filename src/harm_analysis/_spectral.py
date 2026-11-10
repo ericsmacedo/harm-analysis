@@ -77,7 +77,7 @@ def _detection_threshold_db(n_bins: int, false_alarm_rate: float) -> float:
     return 10 * np.log10(np.log(n_bins / false_alarm_rate) / np.log(2)) + _MEDIAN_MARGIN_DB
 
 
-def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm_rate):  # noqa: PLR0913
+def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm_rate, min_bin=0):  # noqa: PLR0913
     x_size = x.size
     x_db = _to_db(x)
 
@@ -92,6 +92,9 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm
         height=height,
         prominence=prominence,
     )
+
+    # Peaks inside the DC component belong to DC, not to a tone
+    peaks = peaks[peaks >= min_bin]
 
     fs_2_bin = x_size - 1
 
@@ -111,7 +114,9 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm
         tones_loc_list = []
         tones_bins_list = []
         for loc in peaks:
-            tone_pow, tone_loc, tone_bins = _find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins)
+            tone_pow, tone_loc, tone_bins = _find_freq_bins(
+                x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins, min_bin=min_bin
+            )
             tones_pow_list.append(tone_pow)
             tones_loc_list.append(tone_loc)
             tones_bins_list.append(tone_bins)
@@ -245,6 +250,7 @@ def spec_analysis(  # noqa: PLR0913
         prominence=prominence,
         height=height,
         false_alarm_rate=false_alarm_rate,
+        min_bin=int(dc_end),
     )
 
     tones_freq = tones_loc * fs / sig_len

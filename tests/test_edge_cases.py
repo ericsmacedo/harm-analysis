@@ -28,6 +28,7 @@ import pytest
 from scipy import signal
 
 from harm_analysis import harm_analysis, spec_analysis
+from harm_analysis._spectrum import _find_freq_bins, _power_from_bins, _power_spectrum
 
 N = 4096
 T = np.arange(N)
@@ -203,3 +204,68 @@ def test_dc_power(func, window_name, n):
     results = func(x, window=window)
 
     assert np.isclose(results.dc_db, 20 * np.log10(dc), atol=0.01)
+
+
+@pytest.mark.parametrize("n", [32, 64, 128, 256, 512, 1024, 4096])
+def test_noise_free_off_bin_tone(n):
+    """A noise-free tone between bins is analyzed at every length (#41).
+
+    Without a noise floor the window's leakage keeps falling away from the tone, so its peak
+    used to grow over the whole spectrum (DC included) for short signals, leaving no noise
+    bins (TypeError), and the leakage was also counted as harmonics.
+    """
+    x = np.cos(2 * np.pi * 0.2 * np.arange(n))  # 0.2 * n is not an integer: off-bin
+
+    results = harm_analysis(x)  # filterwarnings = error: no warnings either
+
+    assert np.isclose(results.fund_freq, 0.2, atol=1e-3)
+    assert np.isclose(results.fund_db, 10 * np.log10(0.5), atol=0.01)
+    # no noise and no harmonics in the signal: zero power, or window leakage far below any real level
+    assert results.noise_db < -100
+    assert results.thd_db < -100
+    assert results.snr_db > 100
+
+    tones = spec_analysis(x)
+    assert np.allclose(tones.tones_freq, [0.2], atol=1e-3)
+    assert np.allclose(tones.tones_db, [10 * np.log10(0.5)], atol=0.01)
+    assert tones.noise_db < -100
+
+
+def test_noise_free_short_tone_reports_zero_noise():
+    """When the tone's leakage covers every bin, noise power is zero: -inf dB, infinite SNR (#41)."""
+    results = harm_analysis(np.cos(2 * np.pi * 0.2 * np.arange(128)))
+
+    assert results.noise_db == -np.inf
+    assert results.snr_db == np.inf
+    assert results.thd_db == -np.inf  # 2nd harmonic in band, but no harmonic power
+    assert results.total_noise_and_dist_db == -np.inf
+
+
+@pytest.mark.parametrize("n", [64, 256])
+def test_real_harmonic_in_short_signal(n):
+    """Excluding the fundamental's bins from the harmonics keeps real harmonics exact."""
+    t = np.arange(n)
+    x = np.cos(2 * np.pi * 0.2 * t) + 0.01 * np.cos(2 * np.pi * 0.4 * t) + np.random.default_rng(0).normal(0, 1e-5, n)
+
+    results = harm_analysis(x, n_harm=1)
+
+    assert np.isclose(results.harm_db[0], 10 * np.log10(0.01**2 / 2), atol=0.02)
+    assert np.isclose(results.thd_db, -40, atol=0.02)
+
+
+def test_peak_never_claims_dc_bins():
+    """_find_freq_bins stops at min_bin (the end of the DC bins)."""
+    x = np.cos(2 * np.pi * 0.2 * np.arange(256))  # leakage reaches DC
+    power, *_ = _power_spectrum(x)
+    peak = int(np.argmax(power))
+
+    _, _, unrestricted = _find_freq_bins(power, peak, bw_bins=power.size - 1, enbw_bins=1.5)
+    _, _, restricted = _find_freq_bins(power, peak, bw_bins=power.size - 1, enbw_bins=1.5, min_bin=3)
+
+    assert unrestricted[0] == 0
+    assert restricted[0] == 3
+
+
+def test_power_from_no_bins_is_zero():
+    """The power of an empty set of bins is 0 (it used to be None)."""
+    assert _power_from_bins(np.ones(10), np.array([], dtype=int), enbw_bins=1.5, bw_bins=9) == 0.0
