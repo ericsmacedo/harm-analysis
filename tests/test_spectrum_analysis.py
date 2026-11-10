@@ -30,6 +30,7 @@ import numpy as np
 from pytest import mark, raises
 
 from harm_analysis import SpecResult, spec_analysis
+from harm_analysis._spectral import _detection_threshold_db
 from harm_analysis._spectrum import _to_db
 
 rng = np.random.default_rng(1234567890)
@@ -168,3 +169,47 @@ def test_spec_analysis_plot_requires_ax():
     """plot=True without an ax raises a clear error."""
     with raises(ValueError, match="`ax` must be provided"):
         spec_analysis(np.zeros(2048) + 1, plot=True)
+
+
+def test_spec_analysis_no_spurious_tone_seed_266():
+    """The noise peak that used to be reported as a tone is rejected (#43)."""
+    n, fs = 2**18, 1000
+    t = np.arange(n) / fs
+    x = (
+        0.123456789
+        + 2 * np.cos(2 * np.pi * 100.13 * t)
+        + 0.01 * np.cos(2 * np.pi * 200.26 * t)
+        + 3 * np.cos(2 * np.pi * 300.39 * t)
+        + 3 * np.cos(np.pi * fs * t)
+        + np.random.default_rng(266).normal(0, 10 ** (-70 / 20), n)
+    )
+
+    results = spec_analysis(x, fs=fs)
+
+    assert np.allclose(results.tones_freq, [100.13, 200.26, 300.39, 500.0], atol=0.01)
+
+
+def test_spec_analysis_false_alarm_rate_on_noise():
+    """On pure noise, the fraction of spectra with a false tone matches false_alarm_rate."""
+    runs, rate = 1000, 0.05
+    with_false_tone = sum(
+        spec_analysis(np.random.default_rng(seed).normal(0, 1, 1024), false_alarm_rate=rate).tones_freq.size > 0
+        for seed in range(runs)
+    )
+
+    # Target rate * runs = 50. The calibration keeps the measured rate between about 0.4x and
+    # 1.5x of the target (conservative for short spectra like this one); seeded, so deterministic.
+    assert rate * runs * 0.25 <= with_false_tone <= rate * runs * 2
+
+
+def test_detection_threshold_grows_with_bins_and_lower_rate():
+    """Longer spectra and lower false-alarm rates need a higher threshold."""
+    assert _detection_threshold_db(513, 1e-3) < _detection_threshold_db(131073, 1e-3)
+    assert _detection_threshold_db(8193, 1e-2) < _detection_threshold_db(8193, 1e-4)
+
+
+@mark.parametrize("rate", [0, 1, -0.1, 2])
+def test_spec_analysis_invalid_false_alarm_rate(rate):
+    """false_alarm_rate must be in (0, 1)."""
+    with raises(ValueError, match="false_alarm_rate"):
+        spec_analysis(np.random.default_rng(0).normal(0, 1, 1024), false_alarm_rate=rate)

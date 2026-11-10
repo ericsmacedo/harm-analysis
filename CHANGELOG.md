@@ -29,6 +29,8 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Added
 
+- `false_alarm_rate` parameter of `spec_analysis` (default `1e-3`): the target
+  probability that noise alone produces a false tone in a spectrum.
 - `HarmResult` and `SpecResult` are exported from `harm_analysis`.
   ([#27](https://github.com/ericsmacedo/harm-analysis/pull/27))
 - `--sfactor` accepts arithmetic expressions: numbers (including `1e5`),
@@ -47,6 +49,13 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- `spec_analysis` occasionally reported a noise peak as a tone (about 1 in 300
+  spectra of 2^18 samples). The default detection threshold is now derived from
+  `false_alarm_rate` and the number of bins (about 13.5 dB above the local noise
+  floor for 1024 samples, 15 dB for 2^18), and the noise floor is estimated over
+  101 bins instead of 51. Weak tones are detected about 1.5-2 dB closer to the
+  noise floor than with the previous fixed 16 dB threshold.
+  ([#43](https://github.com/ericsmacedo/harm-analysis/issues/43))
 - `harm_analysis` crashed with `ValueError: need at least one array to concatenate`
   when all harmonics were outside the band (above `bw` or `fs / 2`); it now returns
   `thd_db = nan` and empty harmonic arrays.

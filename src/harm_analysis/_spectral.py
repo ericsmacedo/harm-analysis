@@ -54,12 +54,35 @@ def _rolling_median_bn(x, window_size):
     return out[window_size - 1 :]
 
 
-def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height):  # noqa: PLR0913
+# Default tone detection threshold (see _detection_threshold_db).
+# The noise floor is estimated with a rolling median over _MEDIAN_WINDOW bins. That estimate
+# is itself noisy, so _MEDIAN_MARGIN_DB is added on top of the theoretical threshold. Both were
+# calibrated on white Gaussian noise: for spectra of 513 to 131073 bins and false_alarm_rate
+# from 0.1 down to 1e-3, the measured rate of spectra with a false tone was between about 0.4x
+# and 1.5x of false_alarm_rate (4000 to 20000 noise realizations per case at 1e-3). It is
+# closest to false_alarm_rate for long spectra and low rates, and conservative otherwise.
+_MEDIAN_WINDOW = 101
+_MEDIAN_MARGIN_DB = 0.75
+
+
+def _detection_threshold_db(n_bins: int, false_alarm_rate: float) -> float:
+    """Return how far above the local median (in dB) a peak must be to count as a tone.
+
+    For white Gaussian noise, the power of each FFT bin is exponentially distributed, so
+    a bin exceeds the median by T dB with probability ``exp(-ln(2) * 10**(T / 10))``.
+    Requiring ``n_bins`` times that probability to equal `false_alarm_rate` gives
+    ``T = 10 * log10(ln(n_bins / false_alarm_rate) / ln(2))``, plus a small margin for the
+    uncertainty of the median estimate.
+    """
+    return 10 * np.log10(np.log(n_bins / false_alarm_rate) / np.log(2)) + _MEDIAN_MARGIN_DB
+
+
+def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm_rate):  # noqa: PLR0913
     x_size = x.size
     x_db = _to_db(x)
 
     if height is None:
-        height = _rolling_median_bn(x_db, 51) + 16
+        height = _rolling_median_bn(x_db, _MEDIAN_WINDOW) + _detection_threshold_db(x_size, false_alarm_rate)
     else:
         height = np.ones(x_size) * height
 
@@ -109,6 +132,7 @@ def spec_analysis(  # noqa: PLR0913
     distance: int = 6,
     prominence: float = 10,
     height: float | None = None,
+    false_alarm_rate: float = 1e-3,
 ) -> SpecResult:
     """Spectral Analysis.
 
@@ -118,6 +142,14 @@ def spec_analysis(  # noqa: PLR0913
     A tone is a peak in the power spectrum (in dB) that meets the `distance`,
     `prominence` and `height` criteria (see :func:`scipy.signal.find_peaks`). All
     bins that are not DC or part of a tone are counted as noise.
+
+    By default a peak must stand out from the local noise floor (the median of the
+    surrounding bins) by a margin derived from `false_alarm_rate`: noise alone
+    produces a false tone in at most about `false_alarm_rate` of the analyzed spectra
+    (white Gaussian noise; measured between 0.4x and 1.5x of the rate). The
+    margin grows slowly with the signal length (about 13.5 dB for 1024 samples and 15 dB
+    for 262144 samples with the default rate), since a longer spectrum has more noise
+    bins that could exceed it.
 
     Parameters
     ----------
@@ -142,8 +174,13 @@ def spec_analysis(  # noqa: PLR0913
     prominence : float, optional
         Required prominence of peaks, in dB. Default is 10.
     height : float, optional
-        Required height of peaks, in dB. Default is None, which uses a threshold
-        16 dB above the rolling median (over 51 bins) of the spectrum.
+        Required height of peaks, in dB (absolute). Default is None, which uses a
+        threshold above the local noise floor set by `false_alarm_rate`.
+    false_alarm_rate : float, optional
+        Target probability that noise alone produces a false tone in a spectrum, used
+        for the default threshold (ignored if `height` is given). Must be in (0, 1).
+        Lower values detect fewer spurious tones but need tones to stand out more from
+        the noise. Default is 1e-3.
 
     Returns
     -------
@@ -158,8 +195,8 @@ def spec_analysis(  # noqa: PLR0913
         If `x` or `window` is complex or not numeric.
     ValueError
         If `plot` is True and no `ax` is given, or if an input is invalid: `x` not
-        1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive, or
-        `window` not the same length as `x`.
+        1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
+        `window` not the same length as `x`, or `false_alarm_rate` not in (0, 1).
 
     Examples
     --------
@@ -184,6 +221,8 @@ def spec_analysis(  # noqa: PLR0913
         raise ValueError("An `ax` must be provided when `plot` is True.")
 
     x = _validate_inputs(x, fs, window=window)
+    if not 0 < false_alarm_rate < 1:
+        raise ValueError(f"`false_alarm_rate` must be in (0, 1), got {false_alarm_rate}.")
 
     x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=None, window=window)
     sig_len = len(x)
@@ -198,6 +237,7 @@ def spec_analysis(  # noqa: PLR0913
         distance=distance,
         prominence=prominence,
         height=height,
+        false_alarm_rate=false_alarm_rate,
     )
 
     tones_freq = tones_loc * fs / sig_len
