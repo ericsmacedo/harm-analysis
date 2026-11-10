@@ -78,7 +78,7 @@ def test_harmonic_at_nyquist():
     assert results.harm_freq[0] == 0.5
     assert np.isclose(results.harm_db[0], -40, atol=0.01)  # 0.01**2 at fs/2 (cosine phase)
     assert np.isclose(results.thd_db, -40 - 10 * np.log10(0.5), atol=0.01)  # fundamental power 1/2
-    assert np.isfinite(results.total_noise_and_dist_db)
+    assert np.isfinite(results.total_noise_db)
 
 
 @pytest.mark.parametrize("n", [1000, 1001, 4096, 4095], ids=_parity)

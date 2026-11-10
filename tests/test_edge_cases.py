@@ -238,7 +238,7 @@ def test_noise_free_short_tone_reports_zero_noise():
     assert results.noise_db == -np.inf
     assert results.snr_db == np.inf
     assert results.thd_db == -np.inf  # 2nd harmonic in band, but no harmonic power
-    assert results.total_noise_and_dist_db == -np.inf
+    assert results.total_noise_db == -np.inf
 
 
 @pytest.mark.parametrize("n", [64, 256])
@@ -269,3 +269,18 @@ def test_peak_never_claims_dc_bins():
 def test_power_from_no_bins_is_zero():
     """The power of an empty set of bins is 0 (it used to be None)."""
     assert _power_from_bins(np.ones(10), np.array([], dtype=int), enbw_bins=1.5, bw_bins=9) == 0.0
+
+
+def test_total_noise_covers_the_whole_spectrum():
+    """total_noise_db is the noise from DC to fs/2: equal to noise_db without bw, larger with a bw."""
+    x = _signal(0.0513, noise_std=1e-3)
+
+    # n_harm=0: the same bins are noise with and without bw (harmonics above bw would
+    # otherwise move from "harmonic" to "noise")
+    full_band = harm_analysis(x, n_harm=0)
+    in_band = harm_analysis(x, n_harm=0, bw=0.1)  # below the 2nd harmonic (0.1026)
+
+    assert np.isclose(full_band.total_noise_db, full_band.noise_db)
+    assert np.isclose(in_band.total_noise_db, full_band.total_noise_db)  # also counts what is above bw
+    # in band: only white noise; whole spectrum: also the (unanalyzed) harmonics above bw
+    assert in_band.noise_db < in_band.total_noise_db - 20

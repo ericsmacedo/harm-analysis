@@ -59,8 +59,11 @@ class HarmResult:
         Signal-to-noise-and-distortion ratio in decibels.
     thdn_db : float
         Total harmonic distortion plus noise in decibels.
-    total_noise_and_dist_db : float
-        Total integrated noise and distortion in decibels.
+    total_noise_db : float
+        Noise power in decibels integrated over the whole spectrum, from DC to fs/2,
+        also beyond `bw` (DC, the fundamental and the analyzed harmonics excluded;
+        harmonics above `bw` are not analyzed, so they count as noise here). Equal to
+        `noise_db` when `bw` is not given.
     """  # noqa: D416
 
     fund_db: float
@@ -73,7 +76,7 @@ class HarmResult:
     snr_db: float
     sinad_db: float
     thdn_db: float
-    total_noise_and_dist_db: float
+    total_noise_db: float
 
     def to_dict(self) -> dict[str, Any]:
         """Return the results as a dictionary of ``{field name: value}``."""

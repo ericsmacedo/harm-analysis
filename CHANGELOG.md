@@ -25,6 +25,9 @@ This release contains breaking changes and will be released as 2.0.0.
   be positive; `window` must match the length of `x`; `bw` must be in
   `(0, fs / 2]`; `n_harm` must not be negative. Complex input is not supported.
   ([#30](https://github.com/ericsmacedo/harm-analysis/pull/30))
+- `HarmResult.total_noise_and_dist_db` is renamed to `total_noise_db`: it is the noise
+  integrated over the whole spectrum (DC to fs/2, also beyond `bw`) and never included
+  the analyzed harmonics, so the old name was misleading. The value is unchanged.
 - `plot=True` without an `ax` raises a `ValueError`. ([#27](https://github.com/ericsmacedo/harm-analysis/pull/27))
 
 ### Changed
@@ -80,7 +83,7 @@ This release contains breaking changes and will be released as 2.0.0.
 - Components exactly at fs/2 (a tone in `spec_analysis`, or a harmonic such as the 2nd
   harmonic of a fundamental at fs/4 in `harm_analysis`) were measured 2.2 dB too high,
   because the fs/2 bin of even-length signals was doubled like the other bins. In that
-  case `total_noise_and_dist_db` was also `nan` with a warning. A tone at fs/2 is now
+  case `total_noise_db` was also `nan` with a warning. A tone at fs/2 is now
   reported at exactly fs/2.
   ([#49](https://github.com/ericsmacedo/harm-analysis/issues/49))
 - `harm_analysis` reported `dc_db` too high by the window's equivalent noise bandwidth

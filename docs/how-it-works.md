@@ -107,7 +107,7 @@ $P_N$ the noise power and $P_{DC}$ the DC power (all up to `bw`):
 | `snr_db` | `fund_db` − `noise_db` |
 | `thdn_db` | $10 \log_{10} \left( P_{\text{rest}} / P_F \right)$, where $P_{\text{rest}}$ is every bin up to `bw` except DC and the fundamental: harmonics, noise and any other spur |
 | `sinad_db` | − `thdn_db` |
-| `total_noise_and_dist_db` | the noise integrated over the whole spectrum, from DC to fs/2, ignoring `bw` (harmonics excluded). Equal to `noise_db` when `bw` is not set |
+| `total_noise_db` | the noise integrated over the whole spectrum, from DC to fs/2, also beyond `bw` (the analyzed harmonics excluded; harmonics above `bw` are not analyzed, so they count as noise here). Equal to `noise_db` when `bw` is not set |
 
 A power of exactly zero is reported as `-inf` dB (for example the noise of a
 perfectly clean simulated tone), without warnings.
