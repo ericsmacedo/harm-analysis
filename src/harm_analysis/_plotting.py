@@ -43,14 +43,43 @@ def _halo(ax):
     return [patheffects.withStroke(linewidth=3, foreground=ax.get_facecolor())]
 
 
-def _label_peak(ax, x, y, name):
+# Labels closer than this fraction of the axes width are staggered vertically
+_MIN_LABEL_SPACING = 0.07
+_STAGGER_POINTS = 22
+
+
+def _axes_fraction(ax, x):
+    """Horizontal position of x as a fraction of the axes width, for the current x scale."""
+    ax.autoscale_view()
+    lo, hi = ax.get_xlim()
+    if ax.get_xscale() == "log":
+        x, lo, hi = (np.log10(max(v, 1e-300)) for v in (x, lo, hi))
+    return (x - lo) / (hi - lo) if hi != lo else 0.0
+
+
+def _label_peaks(ax, peaks):
+    """Label peaks given as (x, y, name), staggering labels that would overlap.
+
+    A label closer than ``_MIN_LABEL_SPACING`` (of the axes width) to the previous one goes
+    one level higher, cycling through three levels; a label with room goes back to level 0.
+    """
+    peaks = sorted((p for p in peaks if np.isfinite(p[1])), key=lambda p: p[0])
+    previous = None
+    level = 0
+    for x, y, name in peaks:
+        position = _axes_fraction(ax, x)
+        close = previous is not None and position - previous < _MIN_LABEL_SPACING
+        level = (level + 1) % 3 if close else 0
+        _label_peak(ax, x, y, name, offset=5 + level * _STAGGER_POINTS)
+        previous = position
+
+
+def _label_peak(ax, x, y, name, offset=5):
     """Write the name and level of a peak just above it (direct label, no box)."""
-    if not np.isfinite(y):
-        return
     ax.annotate(
         f"{name}\n{y:.1f} dB",
         xy=(x, y),
-        xytext=(0, 5),
+        xytext=(0, offset),
         textcoords="offset points",
         ha="center",
         va="bottom",
@@ -61,33 +90,25 @@ def _label_peak(ax, x, y, name):
     )
 
 
-def _label_curve_end(ax, freq_array, curve, text, end_bin):
-    """Write the value of an integrated curve at the end of the analysis band (`end_bin`).
+def _band_value(ax, freq_array, curve, end_bin):
+    """Value of an integrated curve at the end of the analysis band (`end_bin`), or None.
 
     That is the value the analysis reports (e.g. ``noise_db`` with a `bw`), not the end of
-    the curve, which keeps integrating up to fs/2.
+    the curve, which keeps integrating up to fs/2. When the band ends before fs/2, the point
+    is marked on the curve.
     """
     curve = np.ma.masked_invalid(np.ma.asarray(curve)[: end_bin + 1])
-    last = np.flatnonzero(~np.ma.getmaskarray(curve))
-    if last.size == 0:
-        return
-    k = int(last[-1])
-    in_band_only = end_bin < len(freq_array) - 1
-    if in_band_only:
-        # The curve continues past bw: mark the reported value and label it on the right
+    valid = np.flatnonzero(~np.ma.getmaskarray(curve))
+    if valid.size == 0:
+        return None
+    k = int(valid[-1])
+    if end_bin < len(freq_array) - 1:
         ax.plot(freq_array[k], curve[k], "o", ms=5, color=_INT_NOISE, mec=ax.get_facecolor(), mew=1.5, zorder=6)
-    ax.annotate(
-        f"{text} {curve[k]:.1f} dB",
-        xy=(freq_array[k], curve[k]),
-        xytext=(6, -3) if in_band_only else (-2, 4),
-        textcoords="offset points",
-        ha="left" if in_band_only else "right",
-        va="top" if in_band_only else "bottom",
-        fontsize=8,
-        color=_INT_NOISE,
-        path_effects=_halo(ax),
-        zorder=6,
-    )
+    return float(curve[k])
+
+
+def _with_value(label, value):
+    return label if value is None else f"{label} ({value:.1f} dB)"
 
 
 def _style_axes(ax, x_db, freq_array, bw_bins):
@@ -133,11 +154,10 @@ def _plot_spec(  # noqa: PLR0913
         tones_array = _mask_array(x_db, tones_bins)
         ax.plot(freq_array, tones_array, label="Tones", color=_TONE, lw=1.5, zorder=3)
 
-        for i in range(tones_db.size):
-            _label_peak(ax, tones_freq[i], tones_db[i], f"T{i}")
+        _label_peaks(ax, [(tones_freq[i], tones_db[i], f"T{i}") for i in range(tones_db.size)])
 
-    ax.plot(freq_array, int_noise, label="Integrated noise", color=_INT_NOISE, lw=2, zorder=4)
-    _label_curve_end(ax, freq_array, int_noise, "Noise", bw_bins)
+    noise = _band_value(ax, freq_array, int_noise, bw_bins)
+    ax.plot(freq_array, int_noise, label=_with_value("Integrated noise", noise), color=_INT_NOISE, lw=2, zorder=4)
 
     _style_axes(ax, x_db, freq_array, bw_bins)
 
@@ -168,29 +188,30 @@ def _plot_harm(  # noqa: PLR0913
     if fund_bins.size > 0:
         fund_array = _mask_array(x_db, fund_bins)
         ax.plot(freq_array, fund_array, label="Fundamental", color=_TONE, lw=1.5, zorder=3)
-        _label_peak(ax, fund_freq, fund_pow_db, "F")
 
     if harm_bins.size > 0:
         harm_array = _mask_array(x_db, harm_bins)
         ax.plot(freq_array, harm_array, label="Harmonics", color=_HARM, lw=1.5, zorder=3)
 
-        # H2 is the 2nd harmonic (twice the fundamental frequency), H3 the 3rd, ...
-        for i in range(harm_pow_db.size):
-            _label_peak(ax, harm_freq[i], harm_pow_db[i], f"H{i + 2}")
-
+        noise_harm = _band_value(ax, freq_array, int_noise_p_harm, bw_bins)
         ax.plot(
             freq_array,
             int_noise_p_harm,
-            label="Integrated noise + harmonics",
+            label=_with_value("Integrated noise + harmonics", noise_harm),
             color=_INT_NOISE,
             lw=2,
             ls=(0, (5, 2)),
             zorder=4,
         )
-        _label_curve_end(ax, freq_array, int_noise_p_harm, "Noise + harmonics", bw_bins)
 
-    ax.plot(freq_array, int_noise, label="Integrated noise", color=_INT_NOISE, lw=2, zorder=4)
-    _label_curve_end(ax, freq_array, int_noise, "Noise", bw_bins)
+    noise = _band_value(ax, freq_array, int_noise, bw_bins)
+    ax.plot(freq_array, int_noise, label=_with_value("Integrated noise", noise), color=_INT_NOISE, lw=2, zorder=4)
+
+    peaks = [(fund_freq, fund_pow_db, "F")] if fund_bins.size > 0 else []
+    if harm_bins.size > 0:
+        # H2 is the 2nd harmonic (twice the fundamental frequency), H3 the 3rd, ...
+        peaks += [(harm_freq[i], harm_pow_db[i], f"H{i + 2}") for i in range(harm_pow_db.size)]
+    _label_peaks(ax, peaks)
 
     _style_axes(ax, x_db, freq_array, bw_bins)
 
