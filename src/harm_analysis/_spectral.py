@@ -198,6 +198,13 @@ def spec_analysis(  # noqa: PLR0913
         1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
         `window` not the same length as `x`, or `false_alarm_rate` not in (0, 1).
 
+    Notes
+    -----
+    A component exactly at fs/2 (e.g. the 2nd harmonic of a fundamental at fs/4) is
+    sampled as ``A * cos(phase) * (-1)**n``, so its measured power is
+    ``A**2 * cos(phase)**2`` and depends on its phase. Components within about one
+    bin of fs/2 (or of DC) overlap their mirror image and are also phase dependent.
+
     Examples
     --------
     A signal with a DC offset of 0.5 and two tones, sampled at 1 kHz:

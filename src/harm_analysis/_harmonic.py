@@ -181,6 +181,16 @@ def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
     return harm_pow, harm_loc, harm_bins
 
 
+def _last_value(curve) -> float:
+    """Return the last unmasked value of an integrated (masked) curve, or -inf if all are masked.
+
+    The integrated noise curve is masked at bins that are not noise, so its last element is
+    masked whenever the last bin (fs/2) belongs to a tone or harmonic.
+    """
+    values = np.ma.compressed(curve)
+    return float(values[-1]) if values.size else -np.inf
+
+
 def harm_analysis(  # noqa: PLR0913
     x: NDArray[np.float64],
     fs: float = 1,
@@ -267,6 +277,11 @@ def harm_analysis(  # noqa: PLR0913
     Ensure that the frequency components are far enough apart to accommodate for the
     sidelobe width of the Hann window. If this is not feasible, you can use a different
     window by using the "window" input.
+
+    A component exactly at fs/2 (e.g. the 2nd harmonic of a fundamental at fs/4) is
+    sampled as ``A * cos(phase) * (-1)**n``, so its measured power is
+    ``A**2 * cos(phase)**2`` and depends on its phase. Components within about one
+    bin of fs/2 (or of DC) overlap their mirror image and are also phase dependent.
 
     References
     ----------
@@ -372,7 +387,7 @@ def harm_analysis(  # noqa: PLR0913
         snr_db=float(snr_db),
         sinad_db=float(-thdn_db),
         thdn_db=float(thdn_db),
-        total_noise_and_dist_db=float(int_noise[-1]),
+        total_noise_and_dist_db=_last_value(int_noise),
     )
 
     if not plot:

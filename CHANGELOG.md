@@ -54,6 +54,12 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- Components exactly at fs/2 (a tone in `spec_analysis`, or a harmonic such as the 2nd
+  harmonic of a fundamental at fs/4 in `harm_analysis`) were measured 2.2 dB too high,
+  because the fs/2 bin of even-length signals was doubled like the other bins. In that
+  case `total_noise_and_dist_db` was also `nan` with a warning. A tone at fs/2 is now
+  reported at exactly fs/2.
+  ([#49](https://github.com/ericsmacedo/harm-analysis/issues/49))
 - `spec_analysis` occasionally reported a noise peak as a tone (about 1 in 300
   spectra of 2^18 samples). The default detection threshold is now derived from
   `false_alarm_rate` and the number of bins (about 13.5 dB above the local noise
