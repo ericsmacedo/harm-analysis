@@ -54,6 +54,13 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- `harm_analysis` and `spec_analysis` crashed with a `TypeError` on a noise-free tone
+  that is not on an FFT bin, for signals of up to 256 samples: the tone's peak grew
+  over the whole spectrum (DC included) and left no noise bins. Peaks no longer extend
+  into the DC bins, and when no noise bins are left the noise power is 0 (`-inf` dB,
+  infinite SNR). Harmonics no longer reuse bins of the fundamental, which counted its
+  leakage as distortion in short signals (THD of −20 dB for a pure tone of 32 samples).
+  ([#41](https://github.com/ericsmacedo/harm-analysis/issues/41))
 - Components exactly at fs/2 (a tone in `spec_analysis`, or a harmonic such as the 2nd
   harmonic of a fundamental at fs/4 in `harm_analysis`) were measured 2.2 dB too high,
   because the fs/2 bin of even-length signals was doubled like the other bins. In that

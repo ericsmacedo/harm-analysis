@@ -144,7 +144,7 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     return x_fft_pow, f_array
 
 
-def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float):
+def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: float, min_bin: int = 0):
     """Find frequency Bins of fundamental and harmonics.
 
     Finds the frequency bins of frequencies. The end/start of a frequency
@@ -166,6 +166,12 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: f
     enbw_bins: float
         Equivalent noise bandwidth of the window used, in bins.
 
+    min_bin: int
+        First bin the peak may use; pass the end of the DC bins so that a peak never
+        claims them. Without a noise floor (a noise-free tone that is not on a bin), the
+        window's leakage keeps falling away from the peak, so the peak only stops at this
+        limit or after 100 bins.
+
     Returns:
         bins: NDArray
             list of bins of peak
@@ -181,16 +187,16 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: f
 
     # find local max near bin
     width = 3
-    search_start = max(0, idx - width)
+    search_start = max(min_bin, idx - width)
     search_end = min(x_size, idx + width + 1)
     local_max_idx = int(np.argmax(x[search_start:search_end]) + search_start)
 
     # Search for start/end of the peak
-    start_idx = max(0, local_max_idx - 100)
+    start_idx = max(min_bin, local_max_idx - 100)
     end_idx = min(x_size, local_max_idx + 100)
 
-    if local_max_idx == 0:
-        peak_start = 0
+    if local_max_idx <= min_bin:
+        peak_start = local_max_idx
     else:
         d_start = np.diff(x[start_idx:local_max_idx])
         starts = np.where(d_start < 0)[0]
@@ -266,8 +272,8 @@ def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
 
     Returns:
     -------
-    float or None
-        The normalized power within the specified frequency bins, or None if no valid
+    float
+        The normalized power within the specified frequency bins, or 0.0 if no valid
         bins are found.
 
     Notes:
@@ -277,13 +283,13 @@ def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):
     dividing by the equivalent noise bandwidth (`enbw_bins`).
 
     If no valid bins are found within the specified bandwidth, the function returns
-    None.
+    0.0 (e.g. no noise bins are left for a noise-free signal).
     """
     # Filter bins that are outside the specified bandwidth
     bins = bins[bins <= bw_bins]
 
     if bins.size == 0:
-        return None
+        return 0.0
     return np.sum(x_fft_pow[bins]) / enbw_bins
 
 
