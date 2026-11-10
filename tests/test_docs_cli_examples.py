@@ -23,8 +23,10 @@
 """The CLI outputs shown in the documentation match what the CLI prints."""
 
 import importlib.util
+import re
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "docs" / "cli_examples"
@@ -42,7 +44,31 @@ def _generator():
 GENERATOR = _generator()
 
 
+# Numbers in the output (e.g. -3.010296203662002, 1e-05)
+NUMBER = re.compile(r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?")
+
+
+def _split(text):
+    """Return the text with numbers replaced by a placeholder, and the numbers.
+
+    Whitespace runs and table rules ("|-----|") are normalized too: table column widths
+    follow the length of the numbers, so they can change with their last digits.
+    """
+    numbers = np.array([float(n) for n in NUMBER.findall(text)])
+    skeleton = NUMBER.sub("<n>", text)
+    skeleton = re.sub(r"-{2,}", "--", skeleton)
+    return re.sub(r"[ \t]+", " ", skeleton), numbers
+
+
 @pytest.mark.parametrize(("name", "command", "args"), GENERATOR.EXAMPLES, ids=[e[0] for e in GENERATOR.EXAMPLES])
 def test_documented_cli_output_is_current(name, command, args):
-    """Regenerate with: uv run python docs/cli_examples/generate.py."""
-    assert GENERATOR.run(command, args) == (EXAMPLES_DIR / name).read_text()
+    """Regenerate with: uv run python docs/cli_examples/generate.py.
+
+    The text must match exactly; the numbers to 1e-9 (relative), because the last digits of
+    full-precision floats differ between platforms and numerical libraries.
+    """
+    actual_text, actual_numbers = _split(GENERATOR.run(command, args))
+    expected_text, expected_numbers = _split((EXAMPLES_DIR / name).read_text())
+
+    assert actual_text == expected_text
+    np.testing.assert_allclose(actual_numbers, expected_numbers, rtol=1e-9, atol=1e-12)
