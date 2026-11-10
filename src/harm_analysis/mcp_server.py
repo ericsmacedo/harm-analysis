@@ -57,9 +57,10 @@ samples) or samples (a list of numbers), and the sampling frequency fs. Powers a
 frequencies are in the units of fs. null means the value is not finite: NaN (e.g. thd_db
 when no harmonics are in the band) or -inf dB (a power of zero).
 
-The fundamental is the highest spectral component between DC and bw. If a stronger
-interferer is present, run run_spec_analysis first to find the tones and pass a bw below
-the interferer.
+By default the fundamental is the highest spectral component between DC and bw. If you
+know the frequency of the injected tone, pass it as fund_freq: otherwise a stronger
+interferer would be analyzed as the fundamental. If you don't know it, run
+run_spec_analysis first to find the tones.
 """
 
 mcp = MCPServer("harm-analysis", instructions=INSTRUCTIONS)
@@ -102,6 +103,7 @@ def run_harm_analysis(  # noqa: PLR0913
     samples: list[float] | None = None,
     n_harm: int = 5,
     bw: float | None = None,
+    fund_freq: float | None = None,
     delimiter: str | None = None,
 ) -> dict[str, Any]:
     """Analyze a signal that contains an injected tone.
@@ -117,11 +119,13 @@ def run_harm_analysis(  # noqa: PLR0913
         n_harm: Number of harmonics used for THD (default 5).
         bw: Bandwidth for the metrics, in the units of fs (default fs / 2). Use it to exclude
             a stronger tone above the fundamental.
+        fund_freq: Expected frequency of the injected tone, in the units of fs. Pass it when
+            known, so a stronger interferer is not taken as the fundamental.
         delimiter: Column delimiter in the file (default: any whitespace).
     """
     with _input_errors_as_tool_errors():
         x = _load_signal(file_path, samples, delimiter)
-        results = harm_analysis(x, fs=fs, n_harm=n_harm, bw=bw)
+        results = harm_analysis(x, fs=fs, n_harm=n_harm, bw=bw, fund_freq=fund_freq)
     return {key: _jsonable(value) for key, value in results.to_dict().items()}
 
 

@@ -29,6 +29,11 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Added
 
+- `fund_freq` parameter of `harm_analysis` (and `--fund-freq` for the `harm-analysis`
+  command, `fund_freq` for the MCP tool): the expected frequency of the injected
+  tone, so a stronger interferer is no longer taken as the fundamental. It raises a
+  `ValueError` if there is no tone near that frequency.
+  ([#42](https://github.com/ericsmacedo/harm-analysis/issues/42))
 - `false_alarm_rate` parameter of `spec_analysis` (default `1e-3`): the target
   probability that noise alone produces a false tone in a spectrum.
 - `HarmResult` and `SpecResult` are exported from `harm_analysis`.

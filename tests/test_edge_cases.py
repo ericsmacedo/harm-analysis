@@ -119,3 +119,72 @@ def test_all_harmonics_outside_band_plot():
     harm_analysis(_signal(0.3007), plot=True, ax=ax)
     assert ax.lines
     plt.close(fig)
+
+
+def _with_interferer(f_tone, f_interferer, n=N, seed=0):
+    """Unit tone plus an unrelated tone twice as large, and white noise."""
+    t = np.arange(n)
+    x = np.cos(2 * np.pi * f_tone * t) + 2 * np.cos(2 * np.pi * f_interferer * t)
+    return x + np.random.default_rng(seed).normal(0, 1e-5, n)
+
+
+def test_stronger_interferer_is_the_default_fundamental():
+    """Without fund_freq, the highest component is taken as the fundamental (unchanged behavior)."""
+    results = harm_analysis(_with_interferer(0.1003, 0.1507))
+
+    assert np.isclose(results.fund_freq, 0.1507, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    ("f_tone", "f_interferer"),
+    [(0.1003, 0.1507), (0.2003, 0.1207)],
+    ids=["interferer_above", "interferer_below"],
+)
+def test_fund_freq_selects_the_injected_tone(f_tone, f_interferer):
+    """fund_freq analyzes the injected tone even next to a stronger interferer (#42)."""
+    results = harm_analysis(_with_interferer(f_tone, f_interferer), fund_freq=f_tone)
+
+    assert np.isclose(results.fund_freq, f_tone, atol=1e-4)
+    assert np.isclose(results.fund_db, 10 * np.log10(0.5), atol=0.05)
+    # the interferer (4x the power) is counted as noise
+    assert np.isclose(results.snr_db, -10 * np.log10(4), atol=0.1)
+
+
+def test_fund_freq_tolerates_a_slightly_off_value():
+    """fund_freq only needs to be within a few bins of the tone; the result uses the measured frequency."""
+    results = harm_analysis(_with_interferer(0.1003, 0.1507), fund_freq=0.1003 + 2 / N)
+
+    assert np.isclose(results.fund_freq, 0.1003, atol=1e-5)
+
+
+def test_fund_freq_with_bw_excludes_the_interferer():
+    """fund_freq and bw together: the interferer is outside the band, so it does not reduce the SNR."""
+    results = harm_analysis(_with_interferer(0.1003, 0.1507), fund_freq=0.1003, bw=0.125)
+
+    assert np.isclose(results.fund_freq, 0.1003, atol=1e-4)
+    assert results.snr_db > 70
+
+
+@pytest.mark.parametrize(
+    ("fund_freq", "kwargs", "match"),
+    [
+        (0, {}, r"must be in \(0, fs / 2\]"),
+        (0.6, {}, r"must be in \(0, fs / 2\]"),
+        (np.nan, {}, r"must be in \(0, fs / 2\]"),
+        (0.13, {"bw": 0.12}, r"must be in \(0, bw\]"),
+        (0.3, {}, "No tone found near `fund_freq`"),
+        (0.1003 + 5 / N, {}, "No spectral peak found within 3 bins"),
+    ],
+    ids=["zero", "above_nyquist", "nan", "above_bw", "only_noise", "too_far_from_tone"],
+)
+def test_fund_freq_errors(fund_freq, kwargs, match):
+    """Invalid or wrong fund_freq values raise a clear ValueError instead of analyzing noise."""
+    with pytest.raises(ValueError, match=match):
+        harm_analysis(_with_interferer(0.1003, 0.1507), fund_freq=fund_freq, **kwargs)
+
+
+def test_fund_freq_inside_dc():
+    """fund_freq inside the DC component raises a ValueError."""
+    x = 0.5 + _signal(0.0513)
+    with pytest.raises(ValueError, match=r"`fund_freq` .* is inside the DC component"):
+        harm_analysis(x, fund_freq=1 / N)

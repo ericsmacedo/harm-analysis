@@ -239,3 +239,19 @@ def test_cli_json_with_plot(monkeypatch, tmp_path, cmd):
 def test_json_value(value, expected):
     """Non-finite values become null so the output is strict JSON."""
     assert _json_value(value) == expected
+
+
+def test_harm_cli_fund_freq(tmp_path):
+    """--fund-freq selects the injected tone instead of a stronger interferer."""
+    n = 2**14
+    t = np.arange(n)
+    x = np.cos(2 * np.pi * 0.1003 * t) + 2 * np.cos(2 * np.pi * 0.1507 * t)
+    path = tmp_path / "data.txt"
+    np.savetxt(path, x + np.random.default_rng(0).normal(0, 1e-5, n), delimiter="\n")
+
+    default = json.loads(CliRunner().invoke(harm_analysis_cmd, [str(path), "--json"]).output)
+    result = CliRunner().invoke(harm_analysis_cmd, [str(path), "--json", "--fund-freq", "0.1003"])
+
+    assert result.exit_code == 0
+    assert np.isclose(default["fund_freq"], 0.1507, atol=1e-4)
+    assert np.isclose(json.loads(result.output)["fund_freq"], 0.1003, atol=1e-4)
