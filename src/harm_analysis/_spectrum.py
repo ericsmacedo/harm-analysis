@@ -134,9 +134,12 @@ def _fft_pow(x: NDArray[np.float64], win: NDArray[np.float64], n_fft: int, fs: f
     # Obtain absolute value and remove gain added by the window used
     x_fft_abs = np.abs(x_fft) / coherent_gain
 
-    # Single-sided power spectrum
+    # Single-sided power spectrum: every bin except DC also represents its negative
+    # frequency, so its power is doubled. For an even n_fft the last bin is fs/2 itself,
+    # which has no negative-frequency counterpart, so it is not doubled either.
     x_fft_pow = x_fft_abs**2
-    x_fft_pow[1:] *= 2
+    last = x_fft_pow.size - 1 if n_fft % 2 == 0 else x_fft_pow.size
+    x_fft_pow[1:last] *= 2
 
     return x_fft_pow, f_array
 
@@ -208,8 +211,13 @@ def _find_freq_bins(x: NDArray[np.float64], idx: int, bw_bins: int, enbw_bins: f
 
     bins = np.arange(peak_start, peak_end)
 
-    # Estimate precise location using a weighted average
-    peak_loc = np.average(bins, weights=x[bins])
+    # Estimate precise location using a weighted average. A peak whose maximum is the last
+    # bin (at or next to fs/2) overlaps its own mirror image, which the single-sided spectrum
+    # folds back below fs/2 and would pull the average down; report the last bin instead.
+    if local_max_idx == x_size - 1:
+        peak_loc = float(local_max_idx)
+    else:
+        peak_loc = np.average(bins, weights=x[bins])
     peak_val = _power_from_bins(x, bins, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
     return peak_val, peak_loc, bins

@@ -54,6 +54,12 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- Components exactly at fs/2 (a tone in `spec_analysis`, or a harmonic such as the 2nd
+  harmonic of a fundamental at fs/4 in `harm_analysis`) were measured 2.2 dB too high,
+  because the fs/2 bin of even-length signals was doubled like the other bins. In that
+  case `total_noise_and_dist_db` was also `nan` with a warning. A tone at fs/2 is now
+  reported at exactly fs/2.
+  ([#49](https://github.com/ericsmacedo/harm-analysis/issues/49))
 - `harm_analysis` reported `dc_db` too high by the window's equivalent noise bandwidth
   (+1.76 dB with the default Hann window, +3.02 dB with Blackman-Harris). DC detection
   also stopped after the first bin for windows with a flat main lobe, which made
