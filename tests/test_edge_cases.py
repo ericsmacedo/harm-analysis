@@ -22,6 +22,7 @@
 
 """Edge-case tests for harm_analysis."""
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from scipy import signal
@@ -95,3 +96,26 @@ def test_sampling_frequency_scaling():
     assert np.isclose(scaled.fund_db, normalized.fund_db)
     assert np.isclose(scaled.snr_db, normalized.snr_db)
     assert np.isclose(scaled.thd_db, normalized.thd_db)
+
+
+@pytest.mark.parametrize(
+    ("f", "bw"),
+    [(0.0513, 0.08), (0.3007, None)],
+    ids=["harmonics_above_bw", "harmonics_above_nyquist"],
+)
+def test_all_harmonics_outside_band(f, bw):
+    """With no harmonic in the band, THD is NaN and the harmonic arrays are empty (#39)."""
+    results = harm_analysis(_signal(f), bw=bw)
+
+    assert np.isnan(results.thd_db)
+    assert results.harm_freq.size == 0
+    assert results.harm_db.size == 0
+    assert np.isclose(results.fund_freq, f, atol=1e-3)
+
+
+def test_all_harmonics_outside_band_plot():
+    """Plotting works when there is no harmonic in the band (#39)."""
+    fig, ax = plt.subplots()
+    harm_analysis(_signal(0.3007), plot=True, ax=ax)
+    assert ax.lines
+    plt.close(fig)

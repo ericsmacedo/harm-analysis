@@ -47,6 +47,10 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- `harm_analysis` crashed with `ValueError: need at least one array to concatenate`
+  when all harmonics were outside the band (above `bw` or `fs / 2`); it now returns
+  `thd_db = nan` and empty harmonic arrays.
+  ([#39](https://github.com/ericsmacedo/harm-analysis/issues/39))
 - `harm_analysis` called `sys.exit` when `bw` fell inside the DC component of the
   spectrum, terminating the whole process; it now raises a `ValueError`.
   ([#40](https://github.com/ericsmacedo/harm-analysis/issues/40))
