@@ -115,7 +115,7 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array, fund_freq=None, fund_b
     # Index of last dc bin
     dc_end = int(_find_dc_bins(x))
     dc_bins = np.arange(dc_end)
-    dc_pow = np.sum(x[dc_bins])
+    dc_pow = _power_from_bins(x, dc_bins, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
     if bw_bins <= dc_end:
         raise ValueError(

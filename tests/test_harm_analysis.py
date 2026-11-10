@@ -94,7 +94,7 @@ def test_harm_analysis(plot_en):
 
     assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
     assert np.isclose(results.fund_freq, f1, rtol=tolerance)
-    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, atol=0.01)  # dB
     assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
     assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
     assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
@@ -161,7 +161,7 @@ def test_harm_analysis_dc(plot_en):
 
     assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
     assert np.isclose(results.fund_freq, f1, rtol=tolerance)
-    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, atol=0.01)  # dB
     assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
     assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
     assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
@@ -220,7 +220,7 @@ def test_harm_analysis_bw():
 
     assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
     assert np.isclose(results.fund_freq, f1, rtol=tolerance)
-    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, atol=0.01)  # dB
     assert np.isclose(results.noise_db, noise_pow_db - 3, rtol=tolerance)
     assert np.isclose(results.thd_db, thd_db, rtol=tolerance)
     assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
@@ -281,7 +281,7 @@ def test_harm_analysis_harm_zero():
 
     assert np.isclose(results.fund_db, fund_pow_db, rtol=tolerance)
     assert np.isclose(results.fund_freq, f1, rtol=tolerance)
-    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.dc_db, dc_power_db, atol=0.01)  # dB
     assert np.isclose(results.noise_db, noise_pow_db - 3, rtol=tolerance)
     assert np.isnan(results.thd_db)
     assert np.isclose(results.thdn_db, thdn_db, rtol=tolerance)
