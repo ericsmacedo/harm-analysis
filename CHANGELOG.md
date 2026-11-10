@@ -43,6 +43,8 @@ This release contains breaking changes and will be released as 2.0.0.
   "Corner cases" (interferers, shaped noise, noise-free tones, fs/2, false tones,
   invalid input) with figures generated from the code at build time, CLI examples with
   real output, an API overview and a table of contents on the home page.
+- An overview figure and a code snippet at the top of the README and the documentation
+  home page, showing what `harm_analysis` and `spec_analysis` measure.
 - `fund_freq` parameter of `harm_analysis` (and `--fund-freq` for the `harm-analysis`
   command, `fund_freq` for the MCP tool): the expected frequency of the injected
   tone, so a stronger interferer is no longer taken as the fundamental. It raises a

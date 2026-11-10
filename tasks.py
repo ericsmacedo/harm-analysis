@@ -83,6 +83,7 @@ def update_examples(c):
         f"{ENV} ./examples/example_spec_analysis.py > examples/example_spec_analysis.md",
         force_color=False,
     )
+    run_cmd(c, f"{ENV} python docs/figures/overview.py --save", force_color=False)
 
 
 @task
