@@ -91,3 +91,13 @@ def test_valid_inputs_still_accepted(func):
     func(TONE, fs=1000.0)
     if func is harm_analysis:
         func(TONE, fs=1000.0, bw=500.0)
+
+
+def test_harm_analysis_bw_inside_dc_bins():
+    """A `bw` inside the DC bins raises a ValueError instead of exiting the process (#40)."""
+    fs = 1000
+    t = np.arange(4096) / fs
+    x = 0.5 + np.cos(2 * np.pi * 100.3 * t) + np.random.default_rng(0).normal(0, 1e-4, t.size)
+
+    with pytest.raises(ValueError, match="`bw` is inside the DC component"):
+        harm_analysis(x, fs=fs, bw=0.3)

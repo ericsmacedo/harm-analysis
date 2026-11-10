@@ -21,8 +21,6 @@
 # SOFTWARE.
 """Harm Analysis core functions."""
 
-import sys
-
 import numpy as np
 from matplotlib.axes import Axes
 from numpy.typing import NDArray
@@ -40,7 +38,7 @@ from ._spectrum import (
 )
 
 
-def _find_bins(x, n_harm, bw_bins, enbw_bins):
+def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array):
     """Find all bins that belong to the fundamental, harmonics, DC, and noise.
 
     Parameters
@@ -53,6 +51,13 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins):
         the fundamental up to this point.
     n_harm : int
         Number of harmonics to find
+    freq_array : ndarray
+        Frequency of each bin of `x`, used in error messages.
+
+    Raises:
+    ------
+    ValueError
+        If the analysis band (`bw_bins`) ends inside the DC bins.
 
     Notes:
     -----
@@ -65,7 +70,10 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins):
     dc_pow = np.sum(x[dc_bins])
 
     if bw_bins <= dc_end:
-        sys.exit("Error: max bandwidth is too low and is inside the detected dc bins.")
+        raise ValueError(
+            f"`bw` is inside the DC component of the spectrum, which extends to {freq_array[dc_end]:.6g} "
+            "(in the units of `fs`). Use a larger `bw`."
+        )
 
     # the fundamental frequency is found by searching for the bin with the
     # maximum value, excluding DC
@@ -189,7 +197,8 @@ def harm_analysis(  # noqa: PLR0913
         If `x` or `window` is complex or not numeric.
     ValueError
         If the input signal is constant (all zeros or DC only), as there is no tone to
-        analyze; if `plot` is True and no `ax` is given; or if an input is invalid:
+        analyze; if `bw` is so low that it falls inside the DC component of the
+        spectrum; if `plot` is True and no `ax` is given; or if an input is invalid:
         `x` not 1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
         `window` not the same length as `x`, `bw` not in ``(0, fs / 2]``, or `n_harm`
         negative.
@@ -260,7 +269,7 @@ def harm_analysis(  # noqa: PLR0913
     sig_len = len(x)
 
     fund_info, harm_info, dc_info, noise_info, thdn_info = _find_bins(
-        x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins, enbw_bins=enbw_bins
+        x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins, enbw_bins=enbw_bins, freq_array=f_array
     )
 
     fund_pow, fund_loc, fund_bins = fund_info
