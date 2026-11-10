@@ -110,29 +110,22 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array):
 
 
 def _find_harm(x, fund_loc, n_harm, bw_bins, enbw_bins):
-    if n_harm <= 0:
-        harm_loc = np.array([])
-        harm_pow = np.array([])
-        harm_bins = np.array([])
-    else:
-        # calculate the frequency of the harmonics.
-        # frequencies > fs/2 are ignored
-        harm_loc = fund_loc * np.arange(2, n_harm + 2)
-        harm_loc = harm_loc[harm_loc <= bw_bins]
+    """Find the power, location and bins of the harmonics inside the analysis band.
 
-        harm_loc_list = []
-        harm_pow_list = []
-        harm_bins_list = []
-        if harm_loc.size > 0:
-            for loc in harm_loc:
-                harm_pow, harm_loc, harm_bins = _find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins)
-                harm_loc_list.append(harm_loc)
-                harm_pow_list.append(harm_pow)
-                harm_bins_list.append(harm_bins)
+    Returns empty arrays if `n_harm` is 0 or if all harmonics are above `bw_bins`
+    (the `bw` limit or fs/2).
+    """
+    # Expected bin of each harmonic; harmonics above the band are ignored
+    harm_locs = fund_loc * np.arange(2, n_harm + 2)
+    harm_locs = harm_locs[harm_locs <= bw_bins]
 
-        harm_loc = np.asarray(harm_loc_list)
-        harm_pow = np.asarray(harm_pow_list)
-        harm_bins = np.hstack(harm_bins_list)
+    if harm_locs.size == 0:  # n_harm == 0, or all harmonics outside the band
+        return np.array([]), np.array([]), np.array([], dtype=int)
+
+    peaks = [_find_freq_bins(x, int(loc), bw_bins=bw_bins, enbw_bins=enbw_bins) for loc in harm_locs]
+    harm_pow = np.array([power for power, _, _ in peaks])
+    harm_loc = np.array([loc for _, loc, _ in peaks])
+    harm_bins = np.concatenate([bins for _, _, bins in peaks])
 
     return harm_pow, harm_loc, harm_bins
 
