@@ -65,6 +65,8 @@ Or the command line: `harm-analysis capture.txt --fs 1e6 --json`
   the interferer.
 - Tones must be far enough apart for the Hann window's sidelobes; otherwise pass
   another `window` (same length as the signal).
-- `spec_analysis` can occasionally report a weak spurious tone from noise
-  (detection threshold: 16 dB above the local median). Treat very weak tones near
-  the noise floor with care.
+- `spec_analysis` reports a tone when it stands out from the local noise floor by a
+  margin set by `false_alarm_rate` (default 1e-3: noise alone gives a false tone in
+  about 1 of 1000 spectra; the margin is about 13.5-15 dB). Lower it (e.g. 1e-6) to
+  be stricter, or raise it to find weaker tones. Treat tones just above the noise
+  floor with care.

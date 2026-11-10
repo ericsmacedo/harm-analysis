@@ -84,7 +84,9 @@ those when the examples changed on purpose.
 
 - The fundamental is the highest bin between DC and `bw`. A stronger interferer
   is silently taken as the fundamental; `bw` can exclude it.
-- `spec_analysis` tone detection uses a threshold 16 dB above a 51-bin rolling
-  median and can occasionally report a spurious tone from noise. Tests that use
-  random noise must be seeded.
+- `spec_analysis` tone detection compares peaks with a 101-bin rolling median of
+  the spectrum; the margin comes from `false_alarm_rate` (see
+  `_detection_threshold_db` in `_spectral.py`, calibrated on white noise). Noise
+  can still produce a false tone at about that rate, so tests that use random
+  noise must be seeded.
 - Signals must have at least 32 samples.
