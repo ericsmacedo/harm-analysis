@@ -25,6 +25,17 @@ The package provides two main functions:
 - `harm_analysis`: for simulations with an injected tone, returning SNR, THDN, Noise, etc.
 - `spec_analysis`: for cases without an injected tone, that auto-detects DC, tones, and noise from the spectrum.
 
+<!-- overview-start -->
+![harm_analysis measures SNR, THD and SINAD of a test tone; spec_analysis finds DC, tones and noise in any signal](https://raw.githubusercontent.com/ericsmacedo/harm-analysis/main/docs/images/overview.png)
+<!-- overview-end -->
+
+```python
+from harm_analysis import harm_analysis
+
+r = harm_analysis(x, fs=48000)
+print(r.snr_db, r.thd_db, r.sinad_db)
+```
+
 See [usage](./docs/usage.md) for examples.
 
 AI assistants (Claude, GitHub Copilot, ...) can run the analyses through the included
