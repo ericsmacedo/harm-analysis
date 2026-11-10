@@ -397,7 +397,7 @@ def harm_analysis(  # noqa: PLR0913
         snr_db=float(snr_db),
         sinad_db=float(-thdn_db),
         thdn_db=float(thdn_db),
-        total_noise_and_dist_db=_last_value(int_noise),
+        total_noise_db=_last_value(int_noise),
     )
 
     if not plot:
