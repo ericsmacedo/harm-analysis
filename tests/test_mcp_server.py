@@ -119,3 +119,15 @@ def test_errors_reach_the_assistant(arguments, message):
 
     assert result.is_error
     assert message in result.content[0].text
+
+
+def test_harm_analysis_fund_freq():
+    """run_harm_analysis passes fund_freq on, so a stronger interferer is not the fundamental."""
+    x = SIGNAL + 2 * np.cos(2 * np.pi * 150.7 * T)
+
+    default = _call("run_harm_analysis", {"fs": FS, "samples": x.tolist()}).structured_content
+    result = _call("run_harm_analysis", {"fs": FS, "samples": x.tolist(), "fund_freq": 100.3})
+
+    assert not result.is_error
+    assert np.isclose(default["fund_freq"], 150.7, atol=0.05)
+    assert np.isclose(result.structured_content["fund_freq"], 100.3, atol=0.05)

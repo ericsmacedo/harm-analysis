@@ -90,6 +90,15 @@ arg_filepath = click.argument("filename", type=click.Path(exists=True, readable=
 opt_fs = click.option("--fs", default=1.0, help="Sampling frequency.")
 opt_sep = click.option("--sep", default=" ", help="Separator between items.")
 opt_plot = click.option("--plot", is_flag=True, help="Plot the power spectrum of the data")
+opt_fund_freq = click.option(
+    "--fund-freq",
+    type=float,
+    default=None,
+    help=(
+        "Expected frequency of the fundamental, in the units of --fs. Default: the highest "
+        "spectral component. Use it if the data may contain a stronger tone."
+    ),
+)
 opt_json = click.option(
     "--json",
     "as_json",
@@ -167,16 +176,17 @@ def _params_table(params):
 @opt_sep
 @opt_plot
 @opt_sfactor
+@opt_fund_freq
 @opt_json
-def harm_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913
+def harm_analysis_cmd(filename, fs, plot, sep, sfactor, fund_freq, as_json):  # noqa: PLR0913
     """Runs the harm_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
     if plot:
         data_ax, spec_ax = _plot_axes()
-        results = harm_analysis(data, fs=fs, plot=True, ax=spec_ax)
+        results = harm_analysis(data, fs=fs, plot=True, ax=spec_ax, fund_freq=fund_freq)
     else:
-        results = harm_analysis(data, fs=fs)
+        results = harm_analysis(data, fs=fs, fund_freq=fund_freq)
 
     if as_json:
         _print_json(results)

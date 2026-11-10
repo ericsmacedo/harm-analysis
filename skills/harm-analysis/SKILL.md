@@ -31,7 +31,7 @@ import numpy as np
 from harm_analysis import harm_analysis, spec_analysis
 
 x = np.loadtxt("capture.txt")          # 1-D real samples
-results = harm_analysis(x, fs=1e6)      # fs in Hz -> frequencies in Hz
+results = harm_analysis(x, fs=1e6, fund_freq=10e3)  # fs in Hz; tone expected at 10 kHz
 print(results.snr_db, results.thd_db, results.fund_freq)
 print(results.to_dict())                # all metrics
 ```
@@ -47,6 +47,9 @@ Or the command line: `harm-analysis capture.txt --fs 1e6 --json`
   (thousands of samples) give better estimates.
 - `bw` (harm_analysis) limits the band used for the metrics, up to `fs / 2`.
 - `n_harm` (harm_analysis) is the number of harmonics in THD (default 5).
+- `fund_freq` (harm_analysis) is the expected frequency of the injected tone.
+  Pass it whenever it is known (e.g. the test-tone frequency of a simulation or
+  measurement); it only needs to be within about 3 FFT bins (3 * fs / len(x)).
 
 ## Interpreting results
 
@@ -58,11 +61,14 @@ Or the command line: `harm-analysis capture.txt --fs 1e6 --json`
 
 ## Pitfalls
 
-- The fundamental is taken to be the **highest** spectral component between DC
-  and `bw`. If a stronger interferer is present, the results describe the wrong
-  tone. Check `fund_freq` against the expected tone frequency. If it is wrong, run
-  `spec_analysis` to locate the tones, then rerun `harm_analysis` with `bw` below
-  the interferer.
+- Without `fund_freq`, the fundamental is the **highest** spectral component
+  between DC and `bw`, so a stronger interferer would be analyzed instead of the
+  injected tone. Pass `fund_freq` when you know the tone frequency; if you don't,
+  run `spec_analysis` first to locate the tones. With `fund_freq`, any stronger
+  interferer in the band counts as noise and lowers the SNR; exclude it with `bw`
+  if it is above the tone.
+- If `harm_analysis` raises "No tone found near `fund_freq`", the frequency or `fs`
+  is probably wrong (or the tone is buried in noise).
 - Tones must be far enough apart for the Hann window's sidelobes; otherwise pass
   another `window` (same length as the signal).
 - `spec_analysis` reports a tone when it stands out from the local noise floor by a

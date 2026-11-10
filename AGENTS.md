@@ -82,8 +82,10 @@ those when the examples changed on purpose.
 
 ## Known pitfalls
 
-- The fundamental is the highest bin between DC and `bw`. A stronger interferer
-  is silently taken as the fundamental; `bw` can exclude it.
+- Without `fund_freq`, the fundamental is the highest bin between DC and `bw`, so
+  a stronger interferer is taken as the fundamental. With `fund_freq`, it is the
+  tone within 3 bins of that frequency (`_peak_near` in `_harmonic.py`), which must
+  stand out from the noise floor; other tones in the band count as noise.
 - `spec_analysis` tone detection compares peaks with a 101-bin rolling median of
   the spectrum; the margin comes from `false_alarm_rate` (see
   `_detection_threshold_db` in `_spectral.py`, calibrated on white noise). Noise

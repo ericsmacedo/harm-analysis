@@ -27,6 +27,7 @@ from numpy.typing import NDArray
 
 from ._plotting import _plot_harm
 from ._results import HarmResult
+from ._spectral import _MEDIAN_WINDOW, _detection_threshold_db
 from ._spectrum import (
     _find_dc_bins,
     _find_freq_bins,
@@ -37,8 +38,49 @@ from ._spectrum import (
     _validate_inputs,
 )
 
+# Half-width, in bins, of the search for the fundamental around `fund_freq`
+_FUND_SEARCH_BINS = 3
+# Probability that noise alone passes as the fundamental at `fund_freq`
+_FUND_FALSE_ALARM_RATE = 1e-3
 
-def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array):
+
+def _peak_near(x, fund_freq, fund_bin, dc_end, bw_bins, freq_array):  # noqa: PLR0913
+    """Return the bin of the tone within ``_FUND_SEARCH_BINS`` of `fund_bin`.
+
+    Raises a ValueError if `fund_bin` is inside the DC bins, if the spectrum keeps rising
+    past the search range, or if the peak does not stand out from the local noise floor
+    (so noise is never analyzed as the fundamental).
+    """
+    if fund_bin < dc_end:
+        raise ValueError(
+            f"`fund_freq` ({fund_freq:.6g}) is inside the DC component of the spectrum, which extends to "
+            f"{freq_array[dc_end]:.6g} (in the units of `fs`)."
+        )
+    lo = max(dc_end, fund_bin - _FUND_SEARCH_BINS)
+    hi = min(bw_bins, fund_bin + _FUND_SEARCH_BINS)
+    peak = lo + int(np.argmax(x[lo : hi + 1]))
+    rising_below = peak == lo and peak > dc_end and x[peak - 1] > x[peak]
+    rising_above = peak == hi and peak + 1 < x.size and x[peak + 1] > x[peak]
+    if rising_below or rising_above:
+        raise ValueError(
+            f"No spectral peak found within {_FUND_SEARCH_BINS} bins of `fund_freq` ({fund_freq:.6g}); "
+            "check `fund_freq` and `fs`."
+        )
+
+    # The peak must be a tone, not noise: compare it with the local noise floor using the
+    # tone-detection threshold of spec_analysis for a single, known location.
+    half = _MEDIAN_WINDOW // 2
+    floor_db = np.median(_to_db(x[max(0, peak - half) : peak + half + 1]))
+    excess_db = _to_db(x[peak]) - floor_db
+    if excess_db < _detection_threshold_db(1, _FUND_FALSE_ALARM_RATE):
+        raise ValueError(
+            f"No tone found near `fund_freq` ({fund_freq:.6g}): the largest peak within {_FUND_SEARCH_BINS} "
+            f"bins is only {excess_db:.1f} dB above the local noise floor; check `fund_freq` and `fs`."
+        )
+    return peak
+
+
+def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array, fund_freq=None, fund_bin=None):  # noqa: PLR0913
     """Find all bins that belong to the fundamental, harmonics, DC, and noise.
 
     Parameters
@@ -53,11 +95,17 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array):
         Number of harmonics to find
     freq_array : ndarray
         Frequency of each bin of `x`, used in error messages.
+    fund_freq : float or None
+        Expected frequency of the fundamental (for error messages).
+    fund_bin : int or None
+        Expected bin of the fundamental. If None, the highest bin between DC and
+        `bw_bins` is used; otherwise the peak within ``_FUND_SEARCH_BINS`` of it.
 
     Raises:
     ------
     ValueError
-        If the analysis band (`bw_bins`) ends inside the DC bins.
+        If the analysis band (`bw_bins`) ends inside the DC bins, or if `fund_bin` is
+        inside the DC bins or has no tone near it.
 
     Notes:
     -----
@@ -75,9 +123,12 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array):
             "(in the units of `fs`). Use a larger `bw`."
         )
 
-    # the fundamental frequency is found by searching for the bin with the
-    # maximum value, excluding DC
-    max_loc = int(np.argmax(x[dc_end:bw_bins])) + dc_end
+    if fund_bin is None:
+        # the fundamental frequency is found by searching for the bin with the
+        # maximum value, excluding DC
+        max_loc = int(np.argmax(x[dc_end:bw_bins])) + dc_end
+    else:
+        max_loc = _peak_near(x, fund_freq, fund_bin, dc_end, bw_bins, freq_array)
 
     # list containing bins of fundamental
     fund_pow, fund_loc, fund_bins = _find_freq_bins(x, max_loc, bw_bins=bw_bins, enbw_bins=enbw_bins)
@@ -138,6 +189,7 @@ def harm_analysis(  # noqa: PLR0913
     window: None | NDArray[np.float64] = None,
     plot: bool = False,
     ax: None | Axes = None,
+    fund_freq: float | None = None,
 ) -> HarmResult:
     """Harmonic Analysis.
 
@@ -174,6 +226,12 @@ def harm_analysis(  # noqa: PLR0913
         scale, limits, etc.).
     ax : matplotlib.axes.Axes or None, optional
         Axes to plot on. Required if `plot` is True.
+    fund_freq : float, optional
+        Expected frequency of the fundamental, in the same units as `fs`. The
+        fundamental is the spectral peak nearest to it (within 3 bins), which must
+        stand out from the local noise floor. Use it when
+        the signal may contain a component stronger than the injected tone. Default
+        is None: the highest spectral component between DC and `bw`.
 
     Returns
     -------
@@ -191,16 +249,20 @@ def harm_analysis(  # noqa: PLR0913
     ValueError
         If the input signal is constant (all zeros or DC only), as there is no tone to
         analyze; if `bw` is so low that it falls inside the DC component of the
-        spectrum; if `plot` is True and no `ax` is given; or if an input is invalid:
+        spectrum; if `fund_freq` is outside the band, inside the DC component or has
+        no tone near it (a peak that does not stand out from the noise floor); if
+        `plot` is True and no `ax` is given; or if an input is invalid:
         `x` not 1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
         `window` not the same length as `x`, `bw` not in ``(0, fs / 2]``, or `n_harm`
         negative.
 
     Notes
     -----
-    The fundamental is taken to be the highest spectral component between DC and
-    `bw`. If the signal contains a stronger tone, that tone is reported as the
-    fundamental; use `bw` to exclude it when it is above the fundamental.
+    Without `fund_freq`, the fundamental is taken to be the highest spectral
+    component between DC and `bw`. If the signal contains a stronger tone, that tone
+    is reported as the fundamental. Pass `fund_freq` (or use `bw` to exclude a
+    stronger tone above the fundamental) to analyze the intended tone; any other tone
+    in the band is then counted as noise and lowers the SNR.
 
     Ensure that the frequency components are far enough apart to accommodate for the
     sidelobe width of the Hann window. If this is not feasible, you can use a different
@@ -253,6 +315,11 @@ def harm_analysis(  # noqa: PLR0913
         raise ValueError("An `ax` must be provided when `plot` is True.")
 
     x = _validate_inputs(x, fs, window=window, bw=bw, n_harm=n_harm)
+    band = fs / 2 if bw is None else bw
+    if fund_freq is not None and not (np.isfinite(fund_freq) and 0 < fund_freq <= band):
+        raise ValueError(
+            f"`fund_freq` must be in (0, {'fs / 2' if bw is None else 'bw'}] = (0, {band}], got {fund_freq}."
+        )
 
     if np.ptp(x) == 0:
         raise ValueError("No fundamental tone found: the input signal is constant (all zeros or DC only).")
@@ -262,7 +329,13 @@ def harm_analysis(  # noqa: PLR0913
     sig_len = len(x)
 
     fund_info, harm_info, dc_info, noise_info, thdn_info = _find_bins(
-        x=x_fft_pow, n_harm=n_harm, bw_bins=bw_bins, enbw_bins=enbw_bins, freq_array=f_array
+        x=x_fft_pow,
+        n_harm=n_harm,
+        bw_bins=bw_bins,
+        enbw_bins=enbw_bins,
+        freq_array=f_array,
+        fund_freq=fund_freq,
+        fund_bin=None if fund_freq is None else round(fund_freq * sig_len / fs),
     )
 
     fund_pow, fund_loc, fund_bins = fund_info
