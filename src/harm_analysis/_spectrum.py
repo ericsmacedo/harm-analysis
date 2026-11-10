@@ -230,6 +230,11 @@ def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
     the consecutive bins. DC ends when the next bin is greater than
     the current bin.
 
+    The single-sided power spectrum doubles every bin except DC (bin 0). That
+    doubling is undone before comparing the bins: otherwise windows with a flat
+    main lobe (e.g. flat-top) look like they rise from bin 0 to bin 1, and only the
+    first DC bin would be found.
+
     Parameters
     ---------
     x_fft : array_like
@@ -240,7 +245,9 @@ def _find_dc_bins(x_fft: NDArray[np.float64]) -> int | np.signedinteger:
 
     """
     # Stop if DC is not found after 50 samples
-    return np.argmax(np.diff(x_fft[:50]) > 0) + 1
+    two_sided = np.array(x_fft[:50], dtype=np.float64)
+    two_sided[1:] /= 2
+    return np.argmax(np.diff(two_sided) > 0) + 1
 
 
 def _power_from_bins(x_fft_pow, bins, enbw_bins, bw_bins):

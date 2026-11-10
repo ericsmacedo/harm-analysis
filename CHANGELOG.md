@@ -60,6 +60,12 @@ This release contains breaking changes and will be released as 2.0.0.
   case `total_noise_and_dist_db` was also `nan` with a warning. A tone at fs/2 is now
   reported at exactly fs/2.
   ([#49](https://github.com/ericsmacedo/harm-analysis/issues/49))
+- `harm_analysis` reported `dc_db` too high by the window's equivalent noise bandwidth
+  (+1.76 dB with the default Hann window, +3.02 dB with Blackman-Harris). DC detection
+  also stopped after the first bin for windows with a flat main lobe, which made
+  `spec_analysis` report DC 5.76 dB too low with the flat-top window. DC power is now
+  correct for any window and for even and odd lengths.
+  ([#48](https://github.com/ericsmacedo/harm-analysis/issues/48))
 - `spec_analysis` occasionally reported a noise peak as a tone (about 1 in 300
   spectra of 2^18 samples). The default detection threshold is now derived from
   `false_alarm_rate` and the number of bins (about 13.5 dB above the local noise

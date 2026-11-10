@@ -89,8 +89,8 @@ def test_spec_analysis():
     pow_fs2 = np.mean(sig_fs2**2)
     amp_arr_db = np.append(amp_arr_db, 10 * np.log10(pow_fs2))
 
-    assert np.isclose(results.dc, dc_level, rtol=tolerance)
-    assert np.isclose(results.dc_db, dc_power_db, rtol=tolerance)
+    assert np.isclose(results.dc, dc_level, rtol=1e-3)
+    assert np.isclose(results.dc_db, dc_power_db, atol=0.01)  # dB
     assert np.isclose(results.noise_db, noise_pow_db, rtol=tolerance)
     assert np.allclose(results.tones_freq, np.asarray([f1, 2 * f1, 3 * f1, fs / 2]), rtol=tolerance)
     assert np.allclose(results.tones_db, amp_arr_db, rtol=tolerance)
