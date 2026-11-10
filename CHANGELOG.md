@@ -47,6 +47,9 @@ This release contains breaking changes and will be released as 2.0.0.
 
 ### Fixed
 
+- `harm_analysis` called `sys.exit` when `bw` fell inside the DC component of the
+  spectrum, terminating the whole process; it now raises a `ValueError`.
+  ([#40](https://github.com/ericsmacedo/harm-analysis/issues/40))
 - `--sfactor` was evaluated with `eval()`, allowing arbitrary code execution.
   ([#22](https://github.com/ericsmacedo/harm-analysis/pull/22))
 - `harm_analysis` crashed with unhelpful errors on all-zero or DC-only input; it
