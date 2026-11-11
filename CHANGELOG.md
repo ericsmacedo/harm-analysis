@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Documentation
+
+- README and docs front page: one-line summary, install command at the top,
+  a "Why harm-analysis?" section and a runnable example with its output.
+
 ## [2.0.0] - 2026-11-10
 
 This release contains breaking changes; see *Changed (breaking)* below.
