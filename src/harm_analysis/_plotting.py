@@ -23,6 +23,7 @@
 
 import numpy as np
 from matplotlib import patheffects
+from matplotlib.artist import Artist
 from numpy.typing import NDArray
 
 from ._spectrum import _mask_array, _to_db
@@ -43,43 +44,60 @@ def _halo(ax):
     return [patheffects.withStroke(linewidth=3, foreground=ax.get_facecolor())]
 
 
-# Labels closer than this fraction of the axes width are staggered vertically
-_MIN_LABEL_SPACING = 0.07
-_STAGGER_POINTS = 22
+# Gap between a peak and its label, and how many times a label may move up to avoid another one
+_LABEL_GAP_POINTS = 5
+_MAX_LABEL_MOVES = 6
 
 
-def _axes_fraction(ax, x):
-    """Horizontal position of x as a fraction of the axes width, for the current x scale."""
-    ax.autoscale_view()
-    lo, hi = ax.get_xlim()
-    if ax.get_xscale() == "log":
-        x, lo, hi = (np.log10(max(v, 1e-300)) for v in (x, lo, hi))
-    return (x - lo) / (hi - lo) if hi != lo else 0.0
+class _PeakLabelLayout(Artist):
+    """Moves peak labels up so they don't overlap, each time the axes are drawn.
+
+    Drawn before the labels (lowest zorder), it places them from the highest peak down,
+    using their rendered size, so the layout follows the x scale (linear or log), zoom,
+    pan and the figure size, also when they change after plotting.
+    """
+
+    def __init__(self, labels):
+        super().__init__()
+        self._labels = labels
+        self.set_zorder(-1e9)
+
+    def draw(self, renderer):
+        """Place the labels whose peaks are in view."""
+        axes = self.axes
+        if axes is None:
+            return
+        points = renderer.points_to_pixels(1.0)
+        placed = []
+        for label in self._labels:
+            label.xyann = (0, _LABEL_GAP_POINTS)
+            if not axes.bbox.contains(*axes.transData.transform(label.xy)):
+                continue  # matplotlib does not draw it
+            box = label.get_window_extent(renderer)
+            for _ in range(_MAX_LABEL_MOVES):
+                blocking = [other for other in placed if box.overlaps(other)]
+                if not blocking:
+                    break
+                lift = (max(other.y1 for other in blocking) - box.y0) / points + 1
+                label.xyann = (0, label.xyann[1] + lift)
+                box = label.get_window_extent(renderer)
+            placed.append(box)
 
 
 def _label_peaks(ax, peaks):
-    """Label peaks given as (x, y, name), staggering labels that would overlap.
-
-    A label closer than ``_MIN_LABEL_SPACING`` (of the axes width) to the previous one goes
-    one level higher, cycling through three levels; a label with room goes back to level 0.
-    """
-    peaks = sorted((p for p in peaks if np.isfinite(p[1])), key=lambda p: p[0])
-    previous = None
-    level = 0
-    for x, y, name in peaks:
-        position = _axes_fraction(ax, x)
-        close = previous is not None and position - previous < _MIN_LABEL_SPACING
-        level = (level + 1) % 3 if close else 0
-        _label_peak(ax, x, y, name, offset=5 + level * _STAGGER_POINTS)
-        previous = position
+    """Label peaks given as (x, y, name); overlapping labels are moved up at draw time."""
+    peaks = sorted((p for p in peaks if np.isfinite(p[1])), key=lambda p: -p[1])
+    labels = [_label_peak(ax, x, y, name) for x, y, name in peaks]
+    if labels:
+        ax.add_artist(_PeakLabelLayout(labels))
 
 
-def _label_peak(ax, x, y, name, offset=5):
+def _label_peak(ax, x, y, name):
     """Write the name and level of a peak just above it (direct label, no box)."""
-    ax.annotate(
+    return ax.annotate(
         f"{name}\n{y:.1f} dB",
         xy=(x, y),
-        xytext=(0, offset),
+        xytext=(0, _LABEL_GAP_POINTS),
         textcoords="offset points",
         ha="center",
         va="bottom",

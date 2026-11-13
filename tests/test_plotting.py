@@ -25,6 +25,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from matplotlib.text import Annotation
 
 from harm_analysis import harm_analysis, spec_analysis
 
@@ -131,3 +132,53 @@ def test_plot_on_a_dark_axes_background():
 
     assert background[:3] == (0.0, 0.0, 0.0)
     assert labels  # every label has a halo
+
+
+def _label_boxes(fig, ax):
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()  # ty: ignore[unresolved-attribute]
+    return [text.get_window_extent(renderer) for text in ax.texts if "dB" in text.get_text()]
+
+
+def _audio_tone(fs=48000, n=16384):
+    """A 1 kHz tone with five harmonics, close together on a log frequency axis."""
+    t = np.arange(n) / fs
+    x = np.sin(2 * np.pi * 1000 * t) + sum(
+        10 ** (-(40 + 8 * k) / 20) * np.sin(2 * np.pi * 1000 * (k + 2) * t) for k in range(5)
+    )
+    return x + np.random.default_rng(0).normal(0, 1e-4, n)
+
+
+@pytest.mark.parametrize("log_first", [False, True])
+def test_peak_labels_do_not_overlap_on_a_log_frequency_axis(log_first):
+    """Labels of close harmonics don't overlap, also when the log scale is set after plotting."""
+    fig, ax = plt.subplots(figsize=(8, 4))
+    if log_first:
+        ax.set_xscale("log")
+    harm_analysis(_audio_tone(), fs=48000, plot=True, ax=ax)
+    ax.set_xscale("log")
+    boxes = _label_boxes(fig, ax)
+    plt.close(fig)
+
+    assert len(boxes) == 6  # F, H2 ... H6
+    for i, a in enumerate(boxes):
+        for b in boxes[i + 1 :]:
+            assert not a.overlaps(b)
+
+
+def test_peak_labels_move_back_down_when_zoomed_in():
+    """Labels are placed at each draw: after zooming in, a label with room sits next to its peak."""
+    fig, ax = plt.subplots(figsize=(8, 4))
+    harm_analysis(_audio_tone(), fs=48000, plot=True, ax=ax)
+    ax.set_xscale("log")
+    fig.canvas.draw()
+    labels = [text for text in ax.texts if isinstance(text, Annotation) and text.get_text().startswith("H")]
+    lifted = [label for label in labels if label.xyann[1] > 5]
+    assert lifted  # some labels had to move up to avoid their neighbors
+    label = lifted[0]
+    ax.set_xlim(label.xy[0] * 0.98, label.xy[0] * 1.02)
+    fig.canvas.draw()
+    offset = label.xyann[1]
+    plt.close(fig)
+
+    assert offset == 5
