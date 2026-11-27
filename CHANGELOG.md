@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `spec_analysis` has a `bw` argument, like `harm_analysis`: only tones up to
+  `bw` are reported and `noise_db` is the noise from DC to `bw`, e.g. the
+  in-band noise of a sigma-delta converter. Also available as `--bw` in the
+  `spec-analysis` command and as `bw` in the MCP tool `run_spec_analysis`.
+- `harm-analysis` command: `--bw` option, passed to `harm_analysis(bw=...)`.
+
 ### Documentation
 
 - README and docs front page: one-line summary, install command at the top,

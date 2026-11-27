@@ -100,6 +100,14 @@ opt_fund_freq = click.option(
         "spectral component. Use it if the data may contain a stronger tone."
     ),
 )
+opt_bw = click.option(
+    "--bw",
+    type=float,
+    default=None,
+    help=(
+        "Bandwidth of the analysis, in the units of --fs. Default: fs/2. Only the spectrum from DC to --bw is analyzed."
+    ),
+)
 opt_json = click.option(
     "--json",
     "as_json",
@@ -179,16 +187,17 @@ def _params_table(params):
 @opt_plot
 @opt_sfactor
 @opt_fund_freq
+@opt_bw
 @opt_json
-def harm_analysis_cmd(filename, fs, plot, sep, sfactor, fund_freq, as_json):  # noqa: PLR0913
+def harm_analysis_cmd(filename, fs, plot, sep, sfactor, fund_freq, bw, as_json):  # noqa: PLR0913
     """Runs the harm_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
     if plot:
         data_ax, spec_ax = _plot_axes()
-        results = harm_analysis(data, fs=fs, plot=True, ax=spec_ax, fund_freq=fund_freq)
+        results = harm_analysis(data, fs=fs, plot=True, ax=spec_ax, fund_freq=fund_freq, bw=bw)
     else:
-        results = harm_analysis(data, fs=fs, fund_freq=fund_freq)
+        results = harm_analysis(data, fs=fs, fund_freq=fund_freq, bw=bw)
 
     if as_json:
         _print_json(results)
@@ -206,16 +215,17 @@ def harm_analysis_cmd(filename, fs, plot, sep, sfactor, fund_freq, as_json):  # 
 @opt_plot
 @opt_sep
 @opt_sfactor
+@opt_bw
 @opt_json
-def spec_analysis_cmd(filename, fs, plot, sep, sfactor, as_json):  # noqa: PLR0913
+def spec_analysis_cmd(filename, fs, plot, sep, sfactor, bw, as_json):  # noqa: PLR0913
     """Runs the spec_analysis function for a file containing time domain data."""
     data = _load_data(filename, sep, sfactor)
 
     if plot:
         data_ax, spec_ax = _plot_axes()
-        results = spec_analysis(data, fs=fs, plot=True, ax=spec_ax)
+        results = spec_analysis(data, fs=fs, plot=True, ax=spec_ax, bw=bw)
     else:
-        results = spec_analysis(data, fs=fs)
+        results = spec_analysis(data, fs=fs, bw=bw)
 
     if as_json:
         _print_json(results)

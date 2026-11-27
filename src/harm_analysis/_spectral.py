@@ -30,6 +30,7 @@ from scipy import signal
 from ._plotting import _plot_spec
 from ._results import SpecResult
 from ._spectrum import (
+    _check_bw_above_dc,
     _find_dc_bins,
     _find_freq_bins,
     _int_noise_curve,
@@ -78,11 +79,18 @@ def _detection_threshold_db(n_bins: int, false_alarm_rate: float) -> float:
 
 
 def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm_rate, min_bin=0):  # noqa: PLR0913
+    """Find the tones whose peak bin is between `min_bin` and `bw_bins` (inclusive).
+
+    Peaks are searched in the whole spectrum, so the rolling median and the fs/2 handling
+    are the same with or without a `bw`, and then the peaks above `bw_bins` are dropped.
+    The detection threshold uses the number of bins in the band (``bw_bins + 1``), so that
+    `false_alarm_rate` applies to the analyzed band.
+    """
     x_size = x.size
     x_db = _to_db(x)
 
     if height is None:
-        height = _rolling_median_bn(x_db, _MEDIAN_WINDOW) + _detection_threshold_db(x_size, false_alarm_rate)
+        height = _rolling_median_bn(x_db, _MEDIAN_WINDOW) + _detection_threshold_db(bw_bins + 1, false_alarm_rate)
     else:
         height = np.ones(x_size) * height
 
@@ -103,6 +111,9 @@ def _find_tones(x, enbw_bins, bw_bins, distance, prominence, height, false_alarm
             peaks = np.array([fs_2_bin])
         elif np.all(np.abs(peaks - fs_2_bin) > distance):
             peaks = np.append(peaks, fs_2_bin)
+
+    # Tones above the analysis band are not analyzed
+    peaks = peaks[peaks <= bw_bins]
 
     if peaks.size == 0:
         tones_pow = np.array([])
@@ -138,6 +149,7 @@ def spec_analysis(  # noqa: PLR0913
     prominence: float = 10,
     height: float | None = None,
     false_alarm_rate: float = 1e-3,
+    bw: float | None = None,
 ) -> SpecResult:
     """Spectral Analysis.
 
@@ -146,7 +158,7 @@ def spec_analysis(  # noqa: PLR0913
 
     A tone is a peak in the power spectrum (in dB) that meets the `distance`,
     `prominence` and `height` criteria (see :func:`scipy.signal.find_peaks`). All
-    bins that are not DC or part of a tone are counted as noise.
+    bins up to `bw` that are not DC or part of a tone are counted as noise.
 
     By default a peak must stand out from the local noise floor (the median of the
     surrounding bins) by a margin derived from `false_alarm_rate`: noise alone
@@ -186,6 +198,14 @@ def spec_analysis(  # noqa: PLR0913
         for the default threshold (ignored if `height` is given). Must be in (0, 1).
         Lower values detect fewer spurious tones but need tones to stand out more from
         the noise. Default is 1e-3.
+    bw : float, optional
+        Bandwidth of the analysis, in the same units as `fs`. Default is ``fs / 2``.
+        Only tones whose peak is at or below `bw` are reported, and `noise_db`
+        includes only the bins up to `bw`. Use it when only a band of the
+        spectrum matters, e.g. with noise shaped out of the band (sigma-delta) or an
+        audio band. A tone that straddles `bw` keeps only its bins up to `bw`, so its
+        power is underestimated. The default threshold is computed for the number of
+        bins in the band, so `false_alarm_rate` applies to the band.
 
     Returns
     -------
@@ -201,6 +221,7 @@ def spec_analysis(  # noqa: PLR0913
     ValueError
         If `plot` is True and no `ax` is given, or if an input is invalid: `x` not
         1-D, shorter than 32 samples or containing NaN/inf, `fs` not positive,
+        `bw` not in ``(0, fs / 2]`` or inside the DC component of the spectrum,
         `window` not the same length as `x`, or `false_alarm_rate` not in (0, 1).
 
     Notes
@@ -232,15 +253,16 @@ def spec_analysis(  # noqa: PLR0913
     if plot and ax is None:
         raise ValueError("An `ax` must be provided when `plot` is True.")
 
-    x = _validate_inputs(x, fs, window=window)
+    x = _validate_inputs(x, fs, window=window, bw=bw)
     if not 0 < false_alarm_rate < 1:
         raise ValueError(f"`false_alarm_rate` must be in (0, 1), got {false_alarm_rate}.")
 
-    x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=None, window=window)
+    x_fft_pow, f_array, enbw_bins, bw_bins = _power_spectrum(x, fs=fs, bw=bw, window=window)
     sig_len = len(x)
 
     dc_end = _find_dc_bins(x_fft_pow)
     dc_bins = np.arange(dc_end)
+    _check_bw_above_dc(bw_bins, dc_end, f_array)
 
     tones_pow, tones_loc, tones_bins = _find_tones(
         x_fft_pow,

@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pytest import mark, raises
 
-from harm_analysis import SpecResult, spec_analysis
+from harm_analysis import SpecResult, harm_analysis, spec_analysis
 from harm_analysis._spectral import _detection_threshold_db
 from harm_analysis._spectrum import _to_db
 
@@ -213,3 +213,67 @@ def test_spec_analysis_invalid_false_alarm_rate(rate):
     """false_alarm_rate must be in (0, 1)."""
     with raises(ValueError, match="false_alarm_rate"):
         spec_analysis(np.random.default_rng(0).normal(0, 1, 1024), false_alarm_rate=rate)
+
+
+def _shaped_noise_signal():
+    """A 1 kHz tone at -63 dB with first-order shaped noise (sigma-delta style), fs = 10 MHz."""
+    fs, n = 10e6, 2**18
+    t = np.arange(n) / fs
+    noise = np.diff(np.random.default_rng(1).normal(0, 1, n + 1))
+    return fs, 0.001 * np.sin(2 * np.pi * 1e3 * t) + noise
+
+
+def test_spec_analysis_bw_in_band_noise():
+    """With bw, noise_db is the in-band noise only, the same as harm_analysis with that bw."""
+    fs, x = _shaped_noise_signal()
+
+    full = spec_analysis(x, fs=fs)
+    in_band = spec_analysis(x, fs=fs, bw=5e3)
+
+    assert in_band.noise_db < full.noise_db - 60
+    assert np.isclose(in_band.noise_db, harm_analysis(x, fs=fs, n_harm=0, bw=5e3).noise_db)
+    assert np.allclose(in_band.tones_freq, [1e3], rtol=1e-3)
+    assert np.isclose(in_band.dc_db, full.dc_db)
+
+
+def test_spec_analysis_bw_drops_tones_above_band():
+    """Tones above bw are not reported; the ones below are unchanged."""
+    n, fs = 2**14, 1000
+    t = np.arange(n) / fs
+    x = np.cos(2 * np.pi * 100.3 * t) + 0.1 * np.cos(2 * np.pi * 300.7 * t)
+    x = x + np.random.default_rng(0).normal(0, 1e-4, n)
+
+    full = spec_analysis(x, fs=fs)
+    in_band = spec_analysis(x, fs=fs, bw=200)
+
+    assert np.allclose(full.tones_freq, [100.3, 300.7], atol=0.01)
+    assert np.allclose(in_band.tones_freq, [100.3], atol=0.01)
+    assert np.allclose(in_band.tones_db, full.tones_db[:1])
+    assert in_band.noise_db < full.noise_db
+
+
+def test_spec_analysis_bw_equal_to_nyquist_is_default():
+    """Bw = fs/2 gives the same result as no bw."""
+    n, fs = 4096, 1000
+    x = np.cos(2 * np.pi * 100.3 * np.arange(n) / fs) + np.random.default_rng(0).normal(0, 1e-3, n)
+
+    a, b = spec_analysis(x, fs=fs, bw=fs / 2), spec_analysis(x, fs=fs)
+    assert a.noise_db == b.noise_db
+    assert np.array_equal(a.tones_freq, b.tones_freq)
+
+
+def test_spec_analysis_bw_plot_marks_band():
+    """With bw, the plot draws the bw marker."""
+    fs, x = _shaped_noise_signal()
+    fig, ax = plt.subplots()
+    spec_analysis(x, fs=fs, bw=5e3, plot=True, ax=ax)
+    assert "bw" in [line.get_label() for line in ax.lines]
+    plt.close(fig)
+
+
+@mark.parametrize(("bw", "message"), [(0, "`bw` must be in"), (600, "`bw` must be in"), (0.1, "inside the DC")])
+def test_spec_analysis_invalid_bw(bw, message):
+    """Bw must be in (0, fs/2] and above the DC bins."""
+    x = np.random.default_rng(0).normal(0, 1, 1024)
+    with raises(ValueError, match=message):
+        spec_analysis(x, fs=1000, bw=bw)

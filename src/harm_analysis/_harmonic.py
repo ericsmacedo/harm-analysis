@@ -29,6 +29,7 @@ from ._plotting import _plot_harm
 from ._results import HarmResult
 from ._spectral import _MEDIAN_WINDOW, _detection_threshold_db
 from ._spectrum import (
+    _check_bw_above_dc,
     _find_dc_bins,
     _find_freq_bins,
     _int_noise_curve,
@@ -117,11 +118,7 @@ def _find_bins(x, n_harm, bw_bins, enbw_bins, freq_array, fund_freq=None, fund_b
     dc_bins = np.arange(dc_end)
     dc_pow = _power_from_bins(x, dc_bins, enbw_bins=enbw_bins, bw_bins=bw_bins)
 
-    if bw_bins <= dc_end:
-        raise ValueError(
-            f"`bw` is inside the DC component of the spectrum, which extends to {freq_array[dc_end]:.6g} "
-            "(in the units of `fs`). Use a larger `bw`."
-        )
+    _check_bw_above_dc(bw_bins, dc_end, freq_array)
 
     if fund_bin is None:
         # the fundamental frequency is found by searching for the bin with the
