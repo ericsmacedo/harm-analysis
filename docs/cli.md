@@ -72,6 +72,22 @@ harm-analysis interferer.txt --fs 1000 --fund-freq 100.3 --json
 :language: json
 ```
 
+## Only part of the spectrum: `--bw`
+
+`spec-analysis --bw` limits the analysis to the band from DC to `--bw`, in the
+units of `--fs`: tones above it are not listed and `noise_db` is the noise in
+the band only. Use it for the signal band of an oversampled converter whose
+noise is shaped above it, or for a band such as audio. With `--bw 150`, the
+harmonics of `signal.txt` at 200.6 Hz and 300.9 Hz are left out:
+
+```bash
+spec-analysis signal.txt --fs 1000 --bw 150
+```
+
+```{literalinclude} cli_examples/spec_bw.txt
+:language: text
+```
+
 ## ADC codes and scaling: `--sfactor`
 
 `--sfactor` multiplies the data before the analysis, for example to turn ADC

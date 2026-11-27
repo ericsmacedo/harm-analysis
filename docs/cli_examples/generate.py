@@ -40,6 +40,7 @@ EXAMPLES = [
     ("harm_json.txt", harm_analysis_cmd, ["signal.txt", "--fs", "1000", "--json"]),
     ("harm_fund_freq.txt", harm_analysis_cmd, ["interferer.txt", "--fs", "1000", "--fund-freq", "100.3", "--json"]),
     ("spec.txt", spec_analysis_cmd, ["signal.txt", "--fs", "1000"]),
+    ("spec_bw.txt", spec_analysis_cmd, ["signal.txt", "--fs", "1000", "--bw", "150"]),
     (
         "adc_codes.txt",
         harm_analysis_cmd,

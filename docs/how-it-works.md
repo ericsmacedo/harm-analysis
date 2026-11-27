@@ -134,7 +134,8 @@ out from the local noise floor.
 
   For Gaussian noise each bin's power is exponentially distributed, so a bin
   exceeds the median by T dB with probability $\exp(-\ln 2 \cdot 10^{T/10})$;
-  with $N_\text{bins}$ bins to check, that probability is set to
+  with $N_\text{bins}$ bins to check (the bins from DC to `bw`, all of them
+  if `bw` is not given), that probability is set to
   $\alpha / N_\text{bins}$. The 0.75 dB accounts for the median itself being
   an estimate (calibrated on white noise).
 - Peaks must also be at least `distance` bins apart (default 6) and have a
@@ -154,6 +155,12 @@ out from the local noise floor.
 
 Each tone's power and frequency are then measured with the same peak rule as
 the fundamental (step 3), and everything else apart from DC is noise.
+
+With `bw`, the peaks are still searched over the whole spectrum (so the local
+floor near `bw` is the same), but only tones whose peak is at or below `bw` are
+reported, and `noise_db` sums only the noise bins up to `bw`. As with
+harmonics in `harm_analysis`, a tone that straddles `bw` keeps only its bins up
+to `bw`, so its power reads low; set `bw` a few bins away from any tone.
 
 Next: [Corner cases](corner-cases.md) shows what happens in the situations
 where this simple procedure needs your help.

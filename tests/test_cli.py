@@ -255,3 +255,18 @@ def test_harm_cli_fund_freq(tmp_path):
     assert result.exit_code == 0
     assert np.isclose(default["fund_freq"], 0.1507, atol=1e-4)
     assert np.isclose(json.loads(result.output)["fund_freq"], 0.1003, atol=1e-4)
+
+
+def test_spec_cli_bw(tmp_path):
+    """--bw is passed to spec_analysis: tones above it are not listed."""
+    n = 2**14
+    t = np.arange(n) / 1000
+    x = np.cos(2 * np.pi * 100.3 * t) + 0.1 * np.cos(2 * np.pi * 300.7 * t)
+    path = tmp_path / "data.txt"
+    np.savetxt(path, x + np.random.default_rng(1).normal(0, 1e-3, n), delimiter="\n")
+
+    result = CliRunner().invoke(spec_analysis_cmd, [str(path), "--fs", "1000", "--bw", "200", "--json"])
+
+    assert result.exit_code == 0
+    tones = json.loads(result.output)["tones_freq"]
+    assert np.allclose(tones, [100.3], atol=0.01)

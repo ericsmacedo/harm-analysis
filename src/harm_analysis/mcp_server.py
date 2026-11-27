@@ -134,6 +134,7 @@ def run_spec_analysis(
     fs: float,
     file_path: str | None = None,
     samples: list[float] | None = None,
+    bw: float | None = None,
     delimiter: str | None = None,
 ) -> dict[str, Any]:
     """Detect DC, tones and noise in a signal without a known injected tone.
@@ -146,11 +147,14 @@ def run_spec_analysis(
         fs: Sampling frequency, e.g. 1e6 for 1 MHz.
         file_path: Path to a text file with the time-domain samples.
         samples: The time-domain samples, as an alternative to file_path.
+        bw: Bandwidth of the analysis, in the units of fs (default fs / 2). Only tones up to
+            bw are reported and noise_db covers only the band up to bw, e.g. the signal band
+            of a sigma-delta converter whose noise is shaped above it.
         delimiter: Column delimiter in the file (default: any whitespace).
     """
     with _input_errors_as_tool_errors():
         x = _load_signal(file_path, samples, delimiter)
-        results = spec_analysis(x, fs=fs)
+        results = spec_analysis(x, fs=fs, bw=bw)
     return {key: _jsonable(value) for key, value in results.to_dict().items()}
 
 

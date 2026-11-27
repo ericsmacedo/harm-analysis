@@ -329,6 +329,15 @@ def _to_db(power):
         return 10 * np.log10(power)
 
 
+def _check_bw_above_dc(bw_bins, dc_end, freq_array):
+    """Raise a ValueError if the analysis band (`bw_bins`) ends inside the DC bins."""
+    if bw_bins <= dc_end:
+        raise ValueError(
+            f"`bw` is inside the DC component of the spectrum, which extends to {freq_array[dc_end]:.6g} "
+            "(in the units of `fs`). Use a larger `bw`."
+        )
+
+
 def _int_noise_curve(x: NDArray[np.float64], noise_bins: NDArray[np.integer]):
     total_noise_array = _mask_array(x, noise_bins)
     total_int_noise = np.cumsum(total_noise_array)

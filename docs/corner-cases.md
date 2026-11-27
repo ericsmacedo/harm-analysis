@@ -51,6 +51,10 @@ find the fundamental and to compute every metric; the curve beyond `bw` is
 shown for context, and the plot marks the value at `bw`, which is the reported
 `noise_db`.
 
+`spec_analysis` takes the same `bw`: with `bw=5e3`, the signal above reports
+the in-band noise (about −85 dB instead of +3 dB over the whole spectrum) and
+only the tones up to 5 kHz.
+
 ## Noise-free tones in simulations
 
 **What happens.** A simulated tone often has no noise at all. If the tone falls
@@ -132,7 +136,8 @@ off; use a tapered window when DC matters.
 ## Invalid input
 
 Bad input fails immediately with a message that names the parameter, instead of
-an obscure NumPy error or a wrong result:
+an obscure NumPy error or a wrong result (the `bw` errors are the same for
+`spec_analysis`):
 
 | Call | Error |
 |---|---|

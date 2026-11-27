@@ -131,3 +131,13 @@ def test_harm_analysis_fund_freq():
     assert not result.is_error
     assert np.isclose(default["fund_freq"], 150.7, atol=0.05)
     assert np.isclose(result.structured_content["fund_freq"], 100.3, atol=0.05)
+
+
+def test_spec_analysis_bw():
+    """run_spec_analysis passes bw on: noise_db covers only the band up to bw."""
+    result = _call("run_spec_analysis", {"fs": FS, "samples": SIGNAL.tolist(), "bw": 150.0})
+
+    assert not result.is_error
+    expected = spec_analysis(SIGNAL, fs=FS, bw=150.0)
+    assert np.isclose(result.structured_content["noise_db"], expected.noise_db)
+    assert np.allclose(result.structured_content["tones_freq"], expected.tones_freq)
