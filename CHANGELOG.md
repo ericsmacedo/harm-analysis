@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `bw` are reported and `noise_db` is the noise from DC to `bw`, e.g. the
   in-band noise of a sigma-delta converter. Also available as `--bw` in the
   `spec-analysis` command and as `bw` in the MCP tool `run_spec_analysis`.
+- `harm-analysis` command: `--bw` option, passed to `harm_analysis(bw=...)`.
 
 ### Documentation
 

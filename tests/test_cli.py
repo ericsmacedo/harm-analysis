@@ -270,3 +270,13 @@ def test_spec_cli_bw(tmp_path):
     assert result.exit_code == 0
     tones = json.loads(result.output)["tones_freq"]
     assert np.allclose(tones, [100.3], atol=0.01)
+
+
+def test_harm_cli_bw(tmp_path):
+    """--bw is passed to harm_analysis: harmonics above it are not analyzed."""
+    path = _write_tone(tmp_path)
+
+    result = CliRunner().invoke(harm_analysis_cmd, [path, "--fs", "1", "--bw", "0.15", "--json"])
+
+    assert result.exit_code == 0
+    assert json.loads(result.output)["harm_freq"] == []

@@ -74,10 +74,13 @@ harm-analysis interferer.txt --fs 1000 --fund-freq 100.3 --json
 
 ## Only part of the spectrum: `--bw`
 
-`spec-analysis --bw` limits the analysis to the band from DC to `--bw`, in the
-units of `--fs`: tones above it are not listed and `noise_db` is the noise in
-the band only. Use it for the signal band of an oversampled converter whose
-noise is shaped above it, or for a band such as audio. With `--bw 150`, the
+`--bw` limits the analysis of both commands to the band from DC to `--bw`, in
+the units of `--fs`; the noise is integrated only up to `--bw`. Use it for the
+signal band of an oversampled converter whose noise is shaped above it, or for
+a band such as audio (see
+[Shaped noise outside your band](corner-cases.md#shaped-noise-outside-your-band)).
+
+With `spec-analysis`, tones above `--bw` are not listed. With `--bw 150`, the
 harmonics of `signal.txt` at 200.6 Hz and 300.9 Hz are left out:
 
 ```bash
@@ -86,6 +89,18 @@ spec-analysis signal.txt --fs 1000 --bw 150
 
 ```{literalinclude} cli_examples/spec_bw.txt
 :language: text
+```
+
+With `harm-analysis`, harmonics above `--bw` are not analyzed (here the 3rd
+harmonic at 300.9 Hz, so THD includes only the 2nd), and `total_noise_db` still
+reports the noise over the whole spectrum, where the 3rd harmonic counts as noise:
+
+```bash
+harm-analysis signal.txt --fs 1000 --bw 250 --json
+```
+
+```{literalinclude} cli_examples/harm_bw.txt
+:language: json
 ```
 
 ## ADC codes and scaling: `--sfactor`
